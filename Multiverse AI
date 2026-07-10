@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multiverse AI</title>
+<style>
+  :root{
+    --sidebar-bg:#f9f9f9;
+    --sidebar-hover:#ececec;
+    --sidebar-active:#e6e6e6;
+    --border:#e5e5e5;
+    --main-bg:#ffffff;
+    --text:#0d0d0d;
+    --text-secondary:#6e6e80;
+    --text-faint:#9b9ba5;
+    --user-bubble:#f4f4f4;
+    --composer-bg:#f4f4f4;
+    --composer-border:#e5e5e5;
+    --accent:#0d0d0d;
+    --accent-contrast:#ffffff;
+    --danger:#d1332f;
+    --radius-pill:28px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    font-family:var(--font);
+    color:var(--text);
+    background:var(--main-bg);
+    -webkit-font-smoothing:antialiased;
+    font-size:15px;
+  }
+  button{ font-family:inherit; }
+  ::selection{ background:#d7d7f7; }
+
+  .shell{ display:flex; height:100vh; overflow:hidden; }
+
+  .sidebar{
+    width:260px;
+    flex:none;
+    background:var(--sidebar-bg);
+    border-right:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    transition:margin-left .18s ease;
+  }
+  .sidebar.collapsed{ margin-left:-260px; }
+
+  .sidebar-top{
+    padding:10px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .logo-btn{
+    width:36px;height:36px;
+    border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    background:transparent;
+    border:none;
+    cursor:pointer;
+    color:var(--text);
+    flex:none;
+  }
+  .logo-btn:hover{ background:var(--sidebar-hover); }
+  .logo-mark{
+    width:22px;height:22px;
+    border-radius:6px;
+    background:conic-gradient(from 210deg,#10a37f,#7c5cff,#ff8a5c,#10a37f);
+  }
+
+  .new-chat-btn{
+    flex:1;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:9px 12px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:#fff;
+    color:var(--text);
+    font-size:13.5px;
+    font-weight:500;
+    cursor:pointer;
+  }
+  .new-chat-btn:hover{ background:var(--sidebar-hover); }
+
+  .sidebar-search{
+    margin:2px 10px 6px;
+    padding:8px 10px;
+    display:flex; align-items:center; gap:8px;
+    color:var(--text-secondary);
+    font-size:13px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .sidebar-search:hover{ background:var(--sidebar-hover); }
+
+  .sidebar-scroll{
+    flex:1;
+    overflow-y:auto;
+    padding:6px 8px;
+  }
+  .side-section-label{
+    font-size:11.5px;
+    color:var(--text-faint);
+    font-weight:600;
+    padding:14px 8px 6px;
+  }
+  .chat-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    border-radius:8px;
+    font-size:13.5px;
+    color:var(--text);
+    cursor:pointer;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .chat-item:hover{ background:var(--sidebar-hover); }
+  .chat-item.active{ background:var(--sidebar-active); }
+  .chat-item .dot{
+    width:6px;height:6px;border-radius:50%;
+    flex:none;
+  }
+  .chat-item[data-ch="text"] .dot{ background:#10a37f; }
+  .chat-item[data-ch="voice"] .dot{ background:#7c5cff; }
+
+  .sidebar-bottom{
+    border-top:1px solid var(--border);
+    padding:8px;
+  }
+  .settings-btn{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 10px;
+    border-radius:8px;
+    border:none;
+    background:transparent;
+    color:var(--text);
+    font-size:13.5px;
+    cursor:pointer;
+    text-align:left;
+  }
+  .settings-btn:hover{ background:var(--sidebar-hover); }
+  .avatar-chip{
+    width:24px;height:24px;
+    border-radius:6px;
+    background:#0d0d0d;
+    color:#fff;
+    font-size:11px;
+    font-weight:600;
+    display:flex;align-items:center;justify-content:center;
+    flex:none;
+  }
+
+  /* ---------- main ---------- */
+  .main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+    position:relative;
+  }
+
+  .main-header{
+    height:52px;
+    flex:none;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 14px;
+    border-bottom:1px solid transparent;
+  }
+  .header-left{ display:flex; align-items:center; gap:6px; }
+  .icon-btn{
+    width:34px;height:34px;
+    border-radius:8px;
+    border:none;
+    background:transparent;
+    color:var(--text);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+  }
+  .icon-btn:hover{ background:var(--sidebar-hover); }
+
+  .model-picker{
+    position:relative;
+  }
+  .model-picker-btn{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    padding:7px 10px;
+    border-radius:9px;
+    border:none;
+    background:transparent;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    color:var(--text);
+  }
+  .model-picker-btn:hover{ background:var(--sidebar-hover); }
+  .model-picker-btn .chan-dot{ width:7px;height:7px;border-radius:50%; }
+  .model-menu{
+    position:absolute;
+    top:calc(100% + 6px);
+    left:0;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:12px;
+    box-shadow:0 8px 28px rgba(0,0,0,.14);
+    padding:6px;
+    width:250px;
+    display:none;
+    z-index:40;
+  }
+  .model-menu.open{ display:block; }
+  .model-opt{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:9px 10px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .model-opt:hover{ background:var(--sidebar-hover); }
+  .model-opt .chan-dot{ width:8px;height:8px;border-radius:50%; margin-top:5px; flex:none; }
+  .model-opt .mo-title{ font-size:13.5px; font-weight:600; }
+  .model-opt .mo-sub{ font-size:11.5px; color:var(--text-secondary); margin-top:1px; }
+
+  /* ---------- chat scroll ---------- */
+  .chat-scroll{
+    flex:1;
+    overflow-y:auto;
+  }
+  .chat-inner{
+    max-width:720px;
+    margin:0 auto;
+    padding:24px 20px 140px;
+  }
+
+  .welcome{
+    height:100%;
+    min-height:60vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    gap:14px;
+    color:var(--text);
+  }
+  .welcome .mark{
+    width:44px;height:44px;
+    border-radius:12px;
+    background:conic-gradient(from 210deg,#10a37f,#7c5cff,#ff8a5c,#10a37f);
+  }
+  .welcome h2{ font-size:22px; margin:0; font-weight:600; }
+  .welcome p{ margin:0; color:var(--text-secondary); font-size:14px; max-width:380px; line-height:1.5; }
+  .suggestion-row{
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:10px;
+  }
+  .suggestion-chip{
+    border:1px solid var(--border);
+    background:#fff;
+    padding:8px 13px;
+    border-radius:10px;
+    font-size:12.5px;
+    color:var(--text);
+    cursor:pointer;
+  }
+  .suggestion-chip:hover{ background:var(--sidebar-hover); }
+
+  .turn{
+    display:flex;
+    gap:14px;
+    padding:18px 0;
+  }
+  .turn .avatar{
+    width:28px;height:28px;
+    border-radius:7px;
+    flex:none;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;
+    font-weight:700;
+    color:#fff;
+  }
+  .turn.user .avatar{ background:#5d5d70; }
+  .turn.assistant .avatar{ background:linear-gradient(135deg,#10a37f,#0d8c6c); }
+  .turn-body{ flex:1; min-width:0; padding-top:3px; }
+  .turn-role{
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--text-secondary);
+    margin-bottom:3px;
+  }
+  .turn-content{
+    font-size:15px;
+    line-height:1.65;
+    white-space:pre-wrap;
+    word-wrap:break-word;
+  }
+  .turn.user .turn-content{
+    background:var(--user-bubble);
+    display:inline-block;
+    padding:9px 14px;
+    border-radius:16px;
+  }
+  .turn-content img{
+    max-width:280px;
+    border-radius:12px;
+    display:block;
+    margin-bottom:8px;
+  }
+  .turn-tag{
+    font-family:var(--font-mono);
+    font-size:10.5px;
+    color:var(--text-faint);
+    margin-bottom:5px;
+    display:block;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .typing-dots{ display:inline-flex; gap:3px; padding:4px 0; }
+  .typing-dots span{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--text-faint);
+    animation:blink 1.2s infinite ease-in-out;
+  }
+  .typing-dots span:nth-child(2){ animation-delay:.2s; }
+  .typing-dots span:nth-child(3){ animation-delay:.4s; }
+  @keyframes blink{ 0%,80%,100%{ opacity:.25; } 40%{ opacity:1; } }
+
+  /* ---------- composer ---------- */
+  .composer-wrap{
+    position:absolute;
+    left:0; right:0; bottom:0;
+    padding:0 20px 20px;
+    background:linear-gradient(to top, var(--main-bg) 55%, rgba(255,255,255,0));
+  }
+  .composer{
+    max-width:720px;
+    margin:0 auto;
+    background:var(--composer-bg);
+    border:1px solid var(--composer-border);
+    border-radius:26px;
+    padding:8px 8px 8px 10px;
+    display:flex;
+    flex-direction:column;
+    gap:0;
+  }
+  .attachment-preview{
+    display:none;
+    align-items:center;
+    gap:10px;
+    padding:8px 10px 4px;
+  }
+  .attachment-preview.show{ display:flex; }
+  .attachment-preview img{ width:44px;height:44px;object-fit:cover;border-radius:9px; }
+  .attachment-chip{
+    display:flex; align-items:center; gap:8px;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:6px 10px;
+    font-size:12.5px;
+    color:var(--text);
+  }
+  .attachment-chip button{
+    border:none; background:transparent; cursor:pointer; color:var(--text-faint);
+    display:flex; align-items:center; padding:0;
+  }
+  .attachment-chip button:hover{ color:var(--text); }
+
+  .composer-row{
+    display:flex;
+    align-items:flex-end;
+    gap:6px;
+  }
+  .plus-wrap{ position:relative; }
+  .plus-btn{
+    width:34px;height:34px;
+    border-radius:50%;
+    border:1px solid var(--border);
+    background:#fff;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    color:var(--text);
+    flex:none;
+  }
+  .plus-btn:hover{ background:var(--sidebar-hover); }
+  .plus-menu{
+    position:absolute;
+    bottom:calc(100% + 8px);
+    left:0;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:12px;
+    box-shadow:0 8px 28px rgba(0,0,0,.14);
+    padding:5px;
+    width:190px;
+    display:none;
+    z-index:40;
+  }
+  .plus-menu.open{ display:block; }
+  .plus-opt{
+    display:flex; align-items:center; gap:9px;
+    padding:9px 10px;
+    border-radius:8px;
+    font-size:13.5px;
+    cursor:pointer;
+  }
+  .plus-opt:hover{ background:var(--sidebar-hover); }
+
+  textarea#composerInput{
+    flex:1;
+    resize:none;
+    border:none;
+    background:transparent;
+    outline:none;
+    font-family:var(--font);
+    font-size:15px;
+    line-height:1.5;
+    color:var(--text);
+    padding:8px 4px;
+    min-height:22px;
+    max-height:180px;
+  }
+  textarea#composerInput::placeholder{ color:var(--text-faint); }
+
+  .send-btn{
+    width:34px;height:34px;
+    border-radius:50%;
+    border:none;
+    background:var(--accent);
+    color:var(--accent-contrast);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    flex:none;
+    transition:opacity .15s ease;
+  }
+  .send-btn:disabled{ opacity:.3; cursor:not-allowed; }
+  .send-btn:not(:disabled):hover{ opacity:.85; }
+
+  .composer-hint{
+    text-align:center;
+    font-size:11px;
+    color:var(--text-faint);
+    max-width:720px;
+    margin:8px auto 0;
+  }
+  .composer-hint button{
+    border:none; background:none; color:var(--text-secondary); text-decoration:underline; cursor:pointer; font-size:11px; padding:0;
+  }
+
+  /* ---------- settings modal ---------- */
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(0,0,0,.35);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+  }
+  .overlay.open{ display:flex; }
+  .modal{
+    width:460px;
+    max-width:92vw;
+    max-height:86vh;
+    overflow-y:auto;
+    background:#fff;
+    border-radius:16px;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
+    padding:0;
+  }
+  .modal-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 18px;
+    border-bottom:1px solid var(--border);
+  }
+  .modal-header h3{ margin:0; font-size:16px; font-weight:600; }
+  .modal-body{ padding:16px 18px 20px; }
+  .field{ margin-bottom:14px; }
+  .field label{
+    display:block;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--text-secondary);
+    margin-bottom:6px;
+  }
+  .field input, .field select{
+    width:100%;
+    padding:9px 11px;
+    border-radius:9px;
+    border:1px solid var(--border);
+    background:#fafafa;
+    font-size:13.5px;
+    color:var(--text);
+    outline:none;
+    font-family:var(--font-mono);
+  }
+  .field input:focus, .field select:focus{ border-color:#0d0d0d; background:#fff; }
+  .field .desc{ font-size:11.5px; color:var(--text-faint); margin-top:5px; line-height:1.5; }
+  .field .desc a{ color:var(--text-secondary); }
+  .row-2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .section-divider{
+    border:none; border-top:1px solid var(--border);
+    margin:16px 0;
+  }
+  .status-line{
+    font-size:12px;
+    color:var(--text-faint);
+    margin-top:4px;
+    min-height:16px;
+  }
+  .status-line.error{ color:var(--danger); }
+
+  ::-webkit-scrollbar{ width:9px; height:9px; }
+  ::-webkit-scrollbar-thumb{ background:#d9d9d9; border-radius:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+
+  @media (max-width:760px){
+    .sidebar{ position:fixed; z-index:60; height:100%; box-shadow:0 0 0 2000px rgba(0,0,0,0); }
+    .sidebar.collapsed{ margin-left:-260px; }
+    .sidebar:not(.collapsed){ box-shadow:0 0 0 2000px rgba(0,0,0,.25); }
+  }
+
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <button class="logo-btn" id="collapseBtn" title="Toggle sidebar">
+        <div class="logo-mark"></div>
+      </button>
+      <button class="new-chat-btn" id="newChatBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        New chat
+      </button>
+    </div>
+
+    <div class="sidebar-search" id="clearHistoryBtn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+      Clear conversation
+    </div>
+
+    <div class="sidebar-scroll">
+      <div class="side-section-label">This session</div>
+      <div class="chat-item active" data-ch="text">
+        <span class="dot"></span>
+        <span id="sidebarChatTitle">New conversation</span>
+      </div>
+    </div>
+
+    <div class="sidebar-bottom">
+      <button class="settings-btn" id="settingsToggle">
+        <span class="avatar-chip">YOU</span>
+        Keys &amp; models
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <div class="main-header">
+      <div class="header-left">
+        <button class="icon-btn" id="mobileSidebarBtn" title="Show sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
+        </button>
+        <div class="model-picker">
+          <button class="model-picker-btn" id="modelPickerBtn">
+            <span class="chan-dot" id="channelDot" style="background:#10a37f;"></span>
+            <span id="channelLabel">Text</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="model-menu" id="modelMenu">
+            <div class="model-opt" data-ch="text">
+              <span class="chan-dot" style="background:#10a37f;"></span>
+              <div><div class="mo-title">Text</div><div class="mo-sub">Chat via Groq</div></div>
+            </div>
+            <div class="model-opt" data-ch="voice">
+              <span class="chan-dot" style="background:#7c5cff;"></span>
+              <div><div class="mo-title">Voice</div><div class="mo-sub">Transcribe with Whisper, then chat</div></div>
+            </div>
+            <div class="model-opt" data-ch="imagegen">
+              <span class="chan-dot" style="background:#f0a63d;"></span>
+              <div><div class="mo-title">Image Gen</div><div class="mo-sub">Generate images via OpenAI</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="icon-btn" id="settingsToggle2" title="Keys & models">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.36.4.64.73.8.32.16.7.2 1.06.11H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+
+    <div class="chat-scroll" id="chatScroll">
+      <div class="chat-inner" id="chatInner">
+        <div class="welcome" id="welcome">
+          <div class="mark"></div>
+          <h2>Multiverse AI</h2>
+          <p>Type a message, attach a photo to ask about it, or attach a short voice clip to transcribe and discuss — all in one conversation.</p>
+          <div class="suggestion-row">
+            <div class="suggestion-chip" data-fill="Explain how transformers work, in simple terms">Explain how transformers work</div>
+            <div class="suggestion-chip" data-fill="Write a short poem about the ocean at night">Write a short poem</div>
+            <div class="suggestion-chip" data-fill="Give me 3 dinner ideas using chicken and rice">Dinner ideas with chicken</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="composer-wrap">
+      <div class="composer" id="composer">
+        <div class="attachment-preview" id="attachmentPreview"></div>
+        <div class="composer-row">
+          <div class="plus-wrap">
+            <button class="plus-btn" id="plusBtn" title="Attach">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <div class="plus-menu" id="plusMenu">
+              <div class="plus-opt" id="attachAudioOpt">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg>
+                Add voice clip
+              </div>
+            </div>
+          </div>
+          <input type="file" id="audioFile" accept="audio/*" hidden>
+          <textarea id="composerInput" rows="1" placeholder="Message Multimodal Studio…"></textarea>
+          <button class="send-btn" id="sendBtn" disabled>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="composer-hint" id="composerHint">
+        Routed through your backend proxy — no API keys stored in this page. <button id="openSettingsHint">Backend settings</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SETTINGS MODAL ============ -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Keys &amp; models</h3>
+      <button class="icon-btn" id="closeSettings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="backendUrl">Backend URL</label>
+        <input type="text" id="backendUrl" placeholder="http://localhost:8787">
+        <div class="desc">Address of the Multimodal Studio backend proxy. It holds your Groq &amp; OpenAI API keys server-side, so this page never sees them.</div>
+      </div>
+      <hr class="section-divider">
+      <div class="field">
+        <label for="groqApiKey">Groq API key (optional)</label>
+        <input type="password" id="groqApiKey" placeholder="gsk_…" autocomplete="off">
+        <div class="desc">Only used by <strong>Text</strong> and <strong>Voice</strong>. If set, those two channels call Groq directly from your browser and skip the backend entirely. Leave blank to keep routing them through the backend proxy.</div>
+      </div>
+      <hr class="section-divider">
+      <div class="field">
+        <label for="openaiApiKey">OpenAI API key (optional)</label>
+        <input type="password" id="openaiApiKey" placeholder="sk-…" autocomplete="off">
+        <div class="desc">Only used by <strong>Image Gen</strong>. If set, image generation calls OpenAI directly from your browser and skips the backend entirely. Leave blank to keep routing it through the backend proxy.</div>
+      </div>
+      <hr class="section-divider">
+      <div class="row-2">
+        <div class="field">
+          <label for="groqModel">Groq model</label>
+          <select id="groqModel">
+            <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
+            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
+            <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="openaiImageModel">OpenAI image model</label>
+          <select id="openaiImageModel">
+            <option value="gpt-image-1">gpt-image-1</option>
+            <option value="dall-e-3">dall-e-3</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <div class="desc">Model choices are sent with each request and override the backend's defaults. API keys live only in the backend's <code>.env</code> file.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const state = {
+    channel: 'text',
+    history: [],       // {role, content} for Groq text context
+    audioFile: null,
+    hasMessages: false,
+  };
+
+  const el = id => document.getElementById(id);
+  const chatInner = el('chatInner');
+  const chatScroll = el('chatScroll');
+  const welcome = el('welcome');
+  const composerInput = el('composerInput');
+  const sendBtn = el('sendBtn');
+  const plusBtn = el('plusBtn');
+  const plusMenu = el('plusMenu');
+  const attachmentPreview = el('attachmentPreview');
+  const modelPickerBtn = el('modelPickerBtn');
+  const modelMenu = el('modelMenu');
+  const channelLabel = el('channelLabel');
+  const channelDot = el('channelDot');
+  const sidebarChatTitle = el('sidebarChatTitle');
+  const composerHint = el('composerHint');
+
+  const CHANNEL_META = {
+    text:    { label:'Text',  color:'#10a37f' },
+    voice:   { label:'Voice', color:'#7c5cff' },
+    imagegen:{ label:'Image Gen', color:'#f0a63d' },
+  };
+
+  function setChannel(ch){
+    state.channel = ch;
+    const meta = CHANNEL_META[ch];
+    channelLabel.textContent = meta.label;
+    channelDot.style.background = meta.color;
+    modelMenu.classList.remove('open');
+    updateSendState();
+    updatePlaceholder();
+  }
+
+  function updatePlaceholder(){
+    if(state.channel === 'text') composerInput.placeholder = 'Message Multimodal Studio…';
+    else if(state.channel === 'imagegen') composerInput.placeholder = 'Describe the image you want generated…';
+    else if(state.channel === 'voice') composerInput.placeholder = state.audioFile ? 'Add a note (optional), then send…' : 'Attach a voice clip to transcribe…';
+  }
+
+  document.querySelectorAll('.model-opt').forEach(opt => {
+    opt.addEventListener('click', () => setChannel(opt.dataset.ch));
+  });
+
+  modelPickerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    modelMenu.classList.toggle('open');
+  });
+
+  plusBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    plusMenu.classList.toggle('open');
+  });
+  document.addEventListener('click', () => {
+    plusMenu.classList.remove('open');
+    modelMenu.classList.remove('open');
+  });
+
+  el('attachAudioOpt').addEventListener('click', () => { el('audioFile').click(); plusMenu.classList.remove('open'); });
+
+  function renderAttachmentPreview(){
+    attachmentPreview.innerHTML = '';
+    let show = false;
+    if(state.audioFile){
+      show = true;
+      attachmentPreview.innerHTML = `
+        <div class="attachment-chip">
+          🎙 ${escapeHtml(state.audioFile.name)}
+          <button id="removeAudioAtt" title="Remove">✕</button>
+        </div>`;
+      el('removeAudioAtt').addEventListener('click', () => { state.audioFile = null; setChannel('text'); renderAttachmentPreview(); updateSendState(); });
+    }
+    attachmentPreview.classList.toggle('show', show);
+  }
+
+  el('audioFile').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if(!f) return;
+    state.audioFile = f;
+    setChannel('voice');
+    renderAttachmentPreview();
+    updateSendState();
+    composerInput.focus();
+  });
+
+  function autoGrow(){
+    composerInput.style.height = 'auto';
+    composerInput.style.height = Math.min(composerInput.scrollHeight, 180) + 'px';
+  }
+  composerInput.addEventListener('input', () => { autoGrow(); updateSendState(); });
+  composerInput.addEventListener('keydown', e => {
+    if(e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      if(!sendBtn.disabled) sendBtn.click();
+    }
+  });
+
+  function updateSendState(){
+    const text = composerInput.value.trim();
+    let ok = false;
+    if(state.channel === 'text') ok = !!text;
+    else if(state.channel === 'voice') ok = !!state.audioFile;
+    else if(state.channel === 'imagegen') ok = !!text;
+    sendBtn.disabled = !ok;
+  }
+
+  document.querySelectorAll('.suggestion-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      composerInput.value = chip.dataset.fill;
+      autoGrow();
+      updateSendState();
+      composerInput.focus();
+    });
+  });
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function addTurn({role, text, imgUrl, tag}){
+    if(!state.hasMessages){
+      welcome.style.display = 'none';
+      state.hasMessages = true;
+      sidebarChatTitle.textContent = (text || 'Voice message').slice(0,40) || 'New conversation';
+    }
+    const wrap = document.createElement('div');
+    wrap.className = 'turn ' + role;
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = role === 'user' ? 'Y' : 'AI';
+    const body = document.createElement('div');
+    body.className = 'turn-body';
+    const roleLabel = document.createElement('div');
+    roleLabel.className = 'turn-role';
+    roleLabel.textContent = role === 'user' ? 'You' : 'Assistant';
+    const content = document.createElement('div');
+    content.className = 'turn-content';
+    if(tag){
+      const t = document.createElement('span');
+      t.className = 'turn-tag';
+      t.textContent = tag;
+      content.appendChild(t);
+    }
+    if(imgUrl){
+      const img = document.createElement('img');
+      img.src = imgUrl;
+      content.appendChild(img);
+    }
+    const textNode = document.createElement('span');
+    textNode.textContent = text || '';
+    content.appendChild(textNode);
+    body.appendChild(roleLabel);
+    body.appendChild(content);
+    wrap.appendChild(avatar);
+    wrap.appendChild(body);
+    chatInner.appendChild(wrap);
+    scrollToBottom();
+    return textNode;
+  }
+
+  function addTypingTurn(){
+    const wrap = document.createElement('div');
+    wrap.className = 'turn assistant';
+    wrap.innerHTML = `
+      <div class="avatar">AI</div>
+      <div class="turn-body">
+        <div class="turn-role">Assistant</div>
+        <div class="turn-content"><span class="typing-dots"><span></span><span></span><span></span></span></div>
+      </div>`;
+    chatInner.appendChild(wrap);
+    scrollToBottom();
+    return wrap.querySelector('.turn-content');
+  }
+
+  function scrollToBottom(){
+    chatScroll.scrollTop = chatScroll.scrollHeight;
+  }
+
+  const DEFAULT_BACKEND_URL = 'http://localhost:8787';
+
+  function settings(){
+    return {
+      backendUrl: (el('backendUrl').value.trim() || DEFAULT_BACKEND_URL).replace(/\/+$/, ''),
+      groqModel: el('groqModel').value,
+      openaiImageModel: el('openaiImageModel').value,
+      groqApiKey: el('groqApiKey').value.trim(),
+      openaiApiKey: el('openaiApiKey').value.trim(),
+    };
+  }
+
+  // ---------- Groq calls: direct-from-browser if a key is set, backend proxy otherwise ----------
+  // NOTE: Groq's API may not send CORS headers for browser-origin requests. If the
+  // direct-key path fails with a network/CORS error, leave the key field blank and
+  // it'll fall back to going through the backend proxy instead.
+  async function groqChatCompletion(k, messages){
+    if(k.groqApiKey){
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${k.groqApiKey}` },
+        body: JSON.stringify({ model:k.groqModel, messages, temperature:0.7 })
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error?.message || res.statusText);
+      return data.choices?.[0]?.message?.content || '';
+    }
+    const res = await fetch(`${k.backendUrl}/api/chat`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ model:k.groqModel, messages, temperature:0.7 })
+    });
+    if(!res.ok) throw new Error((await res.json()).error || res.statusText);
+    const data = await res.json();
+    return data.answer || '';
+  }
+
+  async function groqTranscribe(k, file){
+    if(k.groqApiKey){
+      const form = new FormData();
+      form.append('file', file);
+      form.append('model', 'whisper-large-v3');
+      const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method:'POST',
+        headers:{ 'Authorization': `Bearer ${k.groqApiKey}` },
+        body: form
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error?.message || res.statusText);
+      return data.text || '';
+    }
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${k.backendUrl}/api/transcribe`, { method:'POST', body: form });
+    if(!res.ok) throw new Error((await res.json()).error || res.statusText);
+    const data = await res.json();
+    return data.transcript || '';
+  }
+
+  // ---------- OpenAI image generation: direct-from-browser if a key is set, backend proxy otherwise ----------
+  // NOTE: same CORS caveat as the Groq direct path above -- if this fails with a
+  // network/CORS error, clear the key field and it falls back to the backend proxy.
+  async function openaiGenerateImage(k, prompt){
+    if(k.openaiApiKey){
+      const body = { model: k.openaiImageModel, prompt, size: '1024x1024', n: 1 };
+      if(k.openaiImageModel === 'dall-e-3') body.response_format = 'b64_json';
+      const res = await fetch('https://api.openai.com/v1/images/generations', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${k.openaiApiKey}` },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error?.message || res.statusText);
+      const imageBase64 = data.data?.[0]?.b64_json || '';
+      if(!imageBase64) throw new Error('OpenAI response did not include image data.');
+      return { imageBase64, mimeType:'image/png', model:k.openaiImageModel };
+    }
+    const res = await fetch(`${k.backendUrl}/api/generate-image`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ prompt, model: k.openaiImageModel })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || res.statusText);
+    return data;
+  }
+
+  // ---------- send router ----------
+  sendBtn.addEventListener('click', async () => {
+    if(sendBtn.disabled) return;
+    if(state.channel === 'text') await sendText();
+    else if(state.channel === 'voice') await sendVoice();
+    else if(state.channel === 'imagegen') await sendImageGen();
+  });
+
+  async function sendText(){
+    const prompt = composerInput.value.trim();
+    if(!prompt) return;
+    const k = settings();
+
+    addTurn({role:'user', text:prompt});
+    state.history.push({role:'user', content:prompt});
+    resetComposer();
+
+    const target = addTypingTurn();
+    try{
+      const answer = (await groqChatCompletion(k, state.history)) || '(empty response)';
+      target.textContent = answer;
+      state.history.push({role:'assistant', content:answer});
+    }catch(err){
+      target.textContent = 'Something went wrong: ' + err.message;
+    }
+  }
+
+  async function sendImageGen(){
+    const prompt = composerInput.value.trim();
+    if(!prompt) return;
+    const k = settings();
+
+    addTurn({role:'user', text:prompt});
+    resetComposer();
+
+    const target = addTypingTurn();
+    try{
+      const data = await openaiGenerateImage(k, prompt);
+      const dataUrl = `data:${data.mimeType || 'image/png'};base64,${data.imageBase64}`;
+      const via = k.openaiApiKey ? 'directly from your browser' : "via your backend's OpenAI key";
+      target.innerHTML = `
+        <img src="${dataUrl}" alt="${escapeHtml(prompt)}" style="max-width:320px;width:100%;border-radius:12px;display:block;">
+        <span style="color:var(--text-faint);font-size:11px;display:block;margin-top:6px;">Generated with ${escapeHtml(data.model || k.openaiImageModel)}, ${via}.</span>`;
+    }catch(err){
+      target.textContent = 'Something went wrong: ' + err.message;
+    }
+  }
+
+  async function sendVoice(){
+    if(!state.audioFile) return;
+    const k = settings();
+    const note = composerInput.value.trim();
+    const fileRef = state.audioFile;
+
+    resetComposer();
+    const transcribing = addTypingTurn();
+    transcribing.innerHTML = '<span class="turn-tag">Transcribing…</span>';
+
+    try{
+      const transcript = (await groqTranscribe(k, fileRef)) || '(no transcript)';
+      transcribing.parentElement.parentElement.remove();
+
+      const combined = note ? `${transcript}\n\n${note}` : transcript;
+      addTurn({role:'user', text:combined, tag:'🎙 transcribed'});
+      state.history.push({role:'user', content:combined});
+
+      const target = addTypingTurn();
+      const answer = (await groqChatCompletion(k, state.history)) || '(empty response)';
+      target.textContent = answer;
+      state.history.push({role:'assistant', content:answer});
+    }catch(err){
+      transcribing.textContent = 'Something went wrong: ' + err.message;
+    }
+  }
+
+  function resetComposer(){
+    composerInput.value = '';
+    composerInput.style.height = 'auto';
+    state.audioFile = null;
+    renderAttachmentPreview();
+    if(state.channel !== 'text') setChannel('text');
+    updateSendState();
+    composerInput.focus();
+  }
+
+  // ---------- new chat / clear ----------
+  el('newChatBtn').addEventListener('click', resetConversation);
+  el('clearHistoryBtn').addEventListener('click', resetConversation);
+  function resetConversation(){
+    state.history = [];
+    state.hasMessages = false;
+    chatInner.innerHTML = '';
+    chatInner.appendChild(welcome);
+    welcome.style.display = 'flex';
+    sidebarChatTitle.textContent = 'New conversation';
+    resetComposer();
+  }
+
+  // ---------- sidebar collapse ----------
+  el('collapseBtn').addEventListener('click', () => el('sidebar').classList.toggle('collapsed'));
+  el('mobileSidebarBtn').addEventListener('click', () => el('sidebar').classList.toggle('collapsed'));
+
+  // ---------- settings modal ----------
+  const overlay = el('settingsOverlay');
+  el('backendUrl').value = DEFAULT_BACKEND_URL;
+
+  function openSettings(){ overlay.classList.add('open'); }
+  function closeSettingsFn(){ overlay.classList.remove('open'); }
+  el('settingsToggle').addEventListener('click', openSettings);
+  el('settingsToggle2').addEventListener('click', openSettings);
+  el('openSettingsHint').addEventListener('click', openSettings);
+  el('closeSettings').addEventListener('click', closeSettingsFn);
+  overlay.addEventListener('click', e => { if(e.target === overlay) closeSettingsFn(); });
+
+  // init
+  setChannel('text');
+  updateSendState();
+})();
+</script>
+
+<!-- ===================== BACKEND FILE: server.js ===================== -->
+<script type="text/plain" id="backend-server-js">
+// server.js
+// Backend proxy for Multimodal Studio.
+// Keeps GROQ_API_KEY / OPENAI_API_KEY server-side, avoids browser CORS issues,
+// and gives you one place to add auth, logging, or rate limiting.
+
+require('dotenv').config();
+
+const express = require('express');
+const cors = require('cors');
+const multer = require('multer');
+const rateLimit = require('express-rate-limit');
+const fetch = require('node-fetch');
+
+const {
+  GROQ_API_KEY,
+  OPENAI_API_KEY,
+  GROQ_CHAT_MODEL = 'llama-3.3-70b-versatile',
+  OPENAI_IMAGE_MODEL = 'gpt-image-1',
+  PORT = 8787,
+  ALLOWED_ORIGINS = '*',
+} = process.env;
+
+if (!GROQ_API_KEY) console.warn('[warn] GROQ_API_KEY is not set — /api/chat and /api/transcribe will fail.');
+if (!OPENAI_API_KEY) console.warn('[warn] OPENAI_API_KEY is not set — /api/generate-image will fail.');
+
+const app = express();
+
+// ---------- middleware ----------
+const allowedOrigins = ALLOWED_ORIGINS.split(',').map(s => s.trim());
+app.use(cors({
+  origin: allowedOrigins.includes('*') ? true : allowedOrigins,
+}));
+app.use(express.json({ limit: '2mb' }));
+
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30, // 30 requests per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', limiter);
+
+const upload = multer({
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB, matches Groq's Whisper limit
+});
+
+// ---------- health check ----------
+app.get('/api/health', (req, res) => {
+  res.json({
+    ok: true,
+    groqConfigured: Boolean(GROQ_API_KEY),
+    openaiConfigured: Boolean(OPENAI_API_KEY),
+  });
+});
+
+// ---------- TEXT: Groq chat completions ----------
+app.post('/api/chat', async (req, res) => {
+  if (!GROQ_API_KEY) return res.status(500).json({ error: 'Server is missing GROQ_API_KEY.' });
+
+  const { messages, model, temperature = 0.7 } = req.body || {};
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: 'Request body must include a non-empty "messages" array.' });
+  }
+
+  try {
+    const upstream = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: model || GROQ_CHAT_MODEL,
+        messages,
+        temperature,
+      }),
+    });
+
+    const data = await upstream.json();
+    if (!upstream.ok) {
+      return res.status(upstream.status).json({ error: data.error?.message || 'Groq request failed.' });
+    }
+
+    const answer = data.choices?.[0]?.message?.content || '';
+    res.json({ answer, raw: data });
+  } catch (err) {
+    console.error('[chat] error:', err);
+    res.status(502).json({ error: 'Could not reach Groq.' });
+  }
+});
+
+
+app.post('/api/generate-image', async (req, res) => {
+  if (!OPENAI_API_KEY) return res.status(500).json({ error: 'Server is missing OPENAI_API_KEY.' });
+
+  const { prompt, model, size = '1024x1024' } = req.body || {};
+  if (!prompt || !prompt.trim()) {
+    return res.status(400).json({ error: 'Request body must include a non-empty "prompt".' });
+  }
+
+  const useModel = model || OPENAI_IMAGE_MODEL;
+  const body = { model: useModel, prompt, size, n: 1 };
+  // gpt-image-1 always returns b64_json; dall-e-3 defaults to a URL unless asked for b64_json.
+  if (useModel === 'dall-e-3') body.response_format = 'b64_json';
+
+  try {
+    const upstream = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await upstream.json();
+    if (!upstream.ok) {
+      return res.status(upstream.status).json({ error: data.error?.message || 'OpenAI image request failed.' });
+    }
+
+    const imageBase64 = data.data?.[0]?.b64_json || '';
+    if (!imageBase64) {
+      return res.status(502).json({ error: 'OpenAI response did not include image data.' });
+    }
+    res.json({ imageBase64, mimeType: 'image/png', model: useModel });
+  } catch (err) {
+    console.error('[generate-image] error:', err);
+    res.status(502).json({ error: 'Could not reach OpenAI.' });
+  }
+});
+
+// ---------- VOICE: Groq Whisper transcription ----------
+app.post('/api/transcribe', upload.single('file'), async (req, res) => {
+  if (!GROQ_API_KEY) return res.status(500).json({ error: 'Server is missing GROQ_API_KEY.' });
+  if (!req.file) return res.status(400).json({ error: 'Upload an audio file under the field name "file".' });
+
+  try {
+    const FormData = (await import('form-data')).default;
+    const form = new FormData();
+    form.append('file', req.file.buffer, { filename: req.file.originalname, contentType: req.file.mimetype });
+    form.append('model', 'whisper-large-v3');
+
+    const upstream = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${GROQ_API_KEY}`, ...form.getHeaders() },
+      body: form,
+    });
+
+    const data = await upstream.json();
+    if (!upstream.ok) {
+      return res.status(upstream.status).json({ error: data.error?.message || 'Groq transcription failed.' });
+    }
+
+    res.json({ transcript: data.text || '', raw: data });
+  } catch (err) {
+    console.error('[transcribe] error:', err);
+    res.status(502).json({ error: 'Could not reach Groq.' });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Multimodal Studio backend listening on http://localhost:${PORT}`);
+});
+</script>
+
+<!-- ===================== BACKEND FILE: package.json ===================== -->
+<script type="text/plain" id="backend-package-json">
+{
+  "name": "multimodal-studio-backend",
+  "version": "1.0.0",
+  "description": "Proxy backend for Multimodal Studio — keeps Groq & OpenAI API keys server-side and avoids browser CORS issues.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "form-data": "^4.0.0",
+    "multer": "^1.4.5-lts.1",
+    "node-fetch": "^2.7.0"
+  }
+}
+</script>
+
+<!-- ===================== BACKEND FILE: .env.example ===================== -->
+<script type="text/plain" id="backend-env-example">
+# Copy this file to .env and fill in your keys.
+# These stay on the server — the browser never sees them.
+
+GROQ_API_KEY=gsk_your_groq_key_here
+OPENAI_API_KEY=sk-your_openai_key_here
+
+# Default models (can be overridden per-request from the frontend)
+GROQ_CHAT_MODEL=llama-3.3-70b-versatile
+OPENAI_IMAGE_MODEL=gpt-image-1
+
+# Port the server listens on
+PORT=8787
+
+# Comma-separated list of origins allowed to call this API.
+# Use * only for local development.
+ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+</script>
+
+</body>
+</html>
