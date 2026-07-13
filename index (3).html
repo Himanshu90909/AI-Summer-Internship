@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Echo Chamber 9000</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root{
+    --void: #16110c;
+    --panel: #241c14;
+    --panel-edge: #3a2c1c;
+    --amber: #ffb000;
+    --amber-dim: #8a5a00;
+    --cream: #f2e6cf;
+    --cream-dim: #b8a988;
+    --signal-red: #ff5a3c;
+    --signal-green: #8fffb0;
+    --focus-ring: #ffd66b;
+    --echo: #c9a4ff;
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse at 50% -10%, #2a2011 0%, transparent 60%),
+      var(--void);
+    color:var(--cream);
+    font-family:'IBM Plex Sans', sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:32px 16px;
+  }
+
+  .console{
+    width:100%;
+    max-width:560px;
+    background:
+      linear-gradient(180deg, #2a2116 0%, #201810 100%);
+    border:1px solid var(--panel-edge);
+    border-radius:6px;
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,.4),
+      0 24px 60px -20px rgba(0,0,0,.7),
+      inset 0 1px 0 rgba(255,255,255,.03);
+    overflow:hidden;
+  }
+
+  /* ---- header plate ---- */
+  .plate{
+    padding:22px 26px 18px;
+    border-bottom:1px solid var(--panel-edge);
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:16px;
+  }
+
+  h1{
+    margin:0;
+    font-family:'Big Shoulders Stencil', sans-serif;
+    font-weight:800;
+    font-size:38px;
+    letter-spacing:0.03em;
+    line-height:0.9;
+    color:var(--cream);
+    text-shadow: 0 0 18px rgba(255,176,0,.15);
+  }
+
+  .subhead{
+    margin:8px 0 0;
+    font-size:13px;
+    color:var(--cream-dim);
+    max-width:34ch;
+    line-height:1.5;
+  }
+
+  .status{
+    flex-shrink:0;
+    text-align:right;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    color:var(--amber-dim);
+    padding-top:6px;
+    white-space:nowrap;
+  }
+
+  .status .dot{
+    display:inline-block;
+    width:7px;height:7px;
+    border-radius:50%;
+    background:var(--amber-dim);
+    margin-left:6px;
+    transition:background .3s, box-shadow .3s;
+  }
+  .status.live .dot{
+    background:var(--signal-green);
+    box-shadow:0 0 8px var(--signal-green);
+  }
+  .status.err .dot{
+    background:var(--signal-red);
+    box-shadow:0 0 8px var(--signal-red);
+  }
+
+  /* ---- body ---- */
+  .body{
+    padding:24px 26px 22px;
+  }
+
+  .field{
+    margin-bottom:18px;
+  }
+
+  .field label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+    color:var(--amber-dim);
+    margin-bottom:7px;
+    text-transform:uppercase;
+  }
+
+  .field input{
+    width:100%;
+    background:#120d08;
+    border:1px solid var(--panel-edge);
+    border-radius:3px;
+    padding:11px 12px;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14px;
+    color:var(--cream);
+    outline:none;
+    transition:border-color .15s, box-shadow .15s;
+  }
+
+  .field input::placeholder{ color:#5c4f3c; }
+
+  .field input:focus{
+    border-color:var(--focus-ring);
+    box-shadow:0 0 0 3px rgba(255,214,107,.18);
+  }
+
+  .field.invalid input{
+    border-color:var(--signal-red);
+  }
+
+  .field-msg{
+    margin-top:6px;
+    font-size:12.5px;
+    line-height:1.4;
+    display:none;
+  }
+  .field-msg.show{ display:block; }
+  .field-msg.error{ color:var(--signal-red); }
+  .field-msg.warning{ color:var(--amber); }
+
+  /* ---- controls row ---- */
+  .controls{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-top:8px;
+  }
+
+  button.transmit{
+    font-family:'Big Shoulders Stencil', sans-serif;
+    font-weight:700;
+    font-size:19px;
+    letter-spacing:0.06em;
+    color:var(--void);
+    background:var(--amber);
+    border:none;
+    border-radius:3px;
+    padding:11px 26px 9px;
+    cursor:pointer;
+    transition:transform .1s, box-shadow .2s, background .2s;
+    box-shadow:0 2px 0 var(--amber-dim);
+  }
+  button.transmit:hover{ background:#ffc233; }
+  button.transmit:active{ transform:translateY(2px); box-shadow:0 0 0 var(--amber-dim); }
+  button.transmit:focus-visible{ outline:2px solid var(--focus-ring); outline-offset:3px; }
+  button.transmit:disabled{
+    background:#5c4f3c; color:#3a2c1c; cursor:not-allowed; box-shadow:none;
+  }
+
+  .meter{
+    display:flex;
+    align-items:center;
+    gap:2px;
+    height:22px;
+  }
+  .meter .bar{
+    width:4px;
+    height:6px;
+    background:var(--panel-edge);
+    border-radius:1px;
+    transition:height .12s ease, background .12s ease;
+  }
+
+  .readout{
+    margin-top:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--cream-dim);
+    text-align:right;
+  }
+
+  /* ---- log / teletype ---- */
+  .log{
+    margin-top:22px;
+    background:#0e0a06;
+    border:1px solid var(--panel-edge);
+    border-radius:4px;
+    padding:14px 16px;
+    height:150px;
+    overflow-y:auto;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    line-height:1.7;
+  }
+
+  .log-line{ display:flex; gap:8px; }
+  .log-line .t{ color:#5c4f3c; flex-shrink:0; }
+  .log-line.info .m{ color:var(--cream-dim); }
+  .log-line.success .m{ color:var(--signal-green); }
+  .log-line.error .m{ color:var(--signal-red); }
+  .log-line.warning .m{ color:var(--amber); }
+  .log-line.system .m{ color:var(--amber-dim); }
+  .log-line.ai .m{ color:var(--echo); }
+  .log-line.pending .m{
+    color:var(--cream-dim);
+    animation:pulse 1.1s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ opacity:.45; }
+    50%{ opacity:1; }
+  }
+
+  .log::-webkit-scrollbar{ width:8px; }
+  .log::-webkit-scrollbar-track{ background:transparent; }
+  .log::-webkit-scrollbar-thumb{ background:var(--panel-edge); border-radius:4px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; animation:none !important; }
+  }
+
+  @media (max-width:480px){
+    h1{ font-size:30px; }
+    .plate{ flex-direction:column; }
+    .status{ text-align:left; padding-top:0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="console">
+  <div class="plate">
+    <div>
+      <h1>ECHO CHAMBER 9000</h1>
+      <p class="subhead">Speak into the console. Every transmission is measured, logged, and echoed back to you.</p>
+    </div>
+    <div class="status" id="status">STANDBY<span class="dot"></span></div>
+  </div>
+
+  <div class="body">
+    <div class="field" id="nameField">
+      <label for="nameInput">Operator Name</label>
+      <input id="nameInput" type="text" placeholder="Who's transmitting?" autocomplete="off">
+      <div class="field-msg error" id="nameMsg">Please provide your name.</div>
+    </div>
+
+    <div class="field" id="msgField">
+      <label for="msgInput">Message Payload</label>
+      <input id="msgInput" type="text" placeholder="What do you want to send?" autocomplete="off">
+      <div class="field-msg warning" id="msgMsg">Please type a message to transmit.</div>
+    </div>
+
+    <div class="controls">
+      <button class="transmit" id="transmitBtn">TRANSMIT</button>
+      <div class="meter" id="meter">
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        <div class="bar"></div><div class="bar"></div>
+      </div>
+    </div>
+    <div class="readout" id="readout">chars: 0 · est. tokens: 0</div>
+
+    <div class="log" id="log">
+      <div class="log-line system"><span class="t">00:00:00</span><span class="m">console online — awaiting input</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const nameInput = document.getElementById('nameInput');
+  const msgInput = document.getElementById('msgInput');
+  const nameField = document.getElementById('nameField');
+  const msgField = document.getElementById('msgField');
+  const nameMsg = document.getElementById('nameMsg');
+  const msgMsg = document.getElementById('msgMsg');
+  const transmitBtn = document.getElementById('transmitBtn');
+  const status = document.getElementById('status');
+  const meter = document.getElementById('meter');
+  const bars = meter.querySelectorAll('.bar');
+  const readout = document.getElementById('readout');
+  const log = document.getElementById('log');
+
+  function timestamp(){
+    const d = new Date();
+    return [d.getHours(), d.getMinutes(), d.getSeconds()]
+      .map(n => String(n).padStart(2,'0')).join(':');
+  }
+
+  function logLine(kind, message){
+    const line = document.createElement('div');
+    line.className = 'log-line ' + kind;
+    line.innerHTML = `<span class="t">${timestamp()}</span><span class="m">${message}</span>`;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+    return line;
+  }
+
+  function setStatus(mode, text){
+    status.className = 'status' + (mode ? ' ' + mode : '');
+    status.innerHTML = text + '<span class="dot"></span>';
+  }
+
+  function updateReadout(){
+    const chars = msgInput.value.length;
+    const tokens = Math.floor(chars / 4);
+    readout.textContent = `chars: ${chars} · est. tokens: ${tokens}`;
+  }
+
+  function animateMeter(active){
+    bars.forEach((bar, i) => {
+      if(active){
+        const h = 6 + Math.random() * 14;
+        bar.style.height = h + 'px';
+        bar.style.background = i < 6 ? 'var(--amber)' : 'var(--signal-red)';
+      } else {
+        bar.style.height = '6px';
+        bar.style.background = 'var(--panel-edge)';
+      }
+    });
+  }
+
+  let meterInterval = null;
+
+  function clearFieldStates(){
+    nameField.classList.remove('invalid');
+    msgField.classList.remove('invalid');
+    nameMsg.classList.remove('show');
+    msgMsg.classList.remove('show');
+  }
+
+  msgInput.addEventListener('input', updateReadout);
+
+  transmitBtn.addEventListener('click', () => {
+    clearFieldStates();
+
+    const name = nameInput.value.trim();
+    const message = msgInput.value.trim();
+
+    // Task 4: Conditional Routing (edge cases)
+    if(name === ''){
+      nameField.classList.add('invalid');
+      nameMsg.classList.add('show');
+      setStatus('err', 'NO SIGNAL — NAME');
+      logLine('error', 'transmission blocked — name field is empty');
+      return;
+    }
+
+    if(message === ''){
+      msgField.classList.add('invalid');
+      msgMsg.classList.add('show');
+      setStatus('err', 'NO SIGNAL — MSG');
+      logLine('warning', 'transmission blocked — message field is empty');
+      return;
+    }
+
+    // Task 5: formatted output + token estimator, with a short "transmitting" beat
+    transmitBtn.disabled = true;
+    setStatus('', 'TRANSMITTING');
+    logLine('info', `encoding payload from ${name}…`);
+    animateMeter(true);
+    meterInterval = setInterval(() => animateMeter(true), 90);
+
+    setTimeout(async () => {
+      clearInterval(meterInterval);
+      animateMeter(false);
+      setStatus('live', 'SIGNAL LOCKED');
+
+      const chars = message.length;
+      const tokens = Math.floor(chars / 4);
+
+      logLine('success', `Transmission successful! Greetings, ${escapeHtml(name)}. We received your message: ${escapeHtml(message)}`);
+      logLine('system', `system check — message consumed approximately ${tokens} tokens from the context window (${chars} chars ÷ 4)`);
+
+      const pending = logLine('pending', 'listening for a reply from the void…');
+
+      try{
+        const reply = await getAIEcho(name, message);
+        pending.remove();
+        logLine('ai', `<strong>ECHO&nbsp;&nbsp;</strong>${escapeHtml(reply)}`);
+      }catch(err){
+        pending.remove();
+        logLine('warning', 'the void stayed quiet — AI echo unavailable outside the live preview.');
+      }finally{
+        transmitBtn.disabled = false;
+      }
+    }, 650);
+  });
+
+  async function getAIEcho(name, message){
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 200,
+        messages: [
+          {
+            role: "user",
+            content:
+              `You are the voice of a retro transmission console called "Echo Chamber 9000." ` +
+              `An operator named "${name}" just sent this message: "${message}". ` +
+              `Write a short in-character reply (2-3 sentences, no markdown, no headers) that ` +
+              `acknowledges them by name and responds to what they said — atmospheric and a ` +
+              `little cryptic, like a signal answering back from deep space, but ultimately warm.`
+          }
+        ]
+      })
+    });
+
+    if(!response.ok){
+      throw new Error('AI request failed: ' + response.status);
+    }
+
+    const data = await response.json();
+    const text = (data.content || [])
+      .filter(block => block.type === 'text')
+      .map(block => block.text)
+      .join('\n')
+      .trim();
+
+    if(!text) throw new Error('empty AI response');
+    return text;
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  updateReadout();
+</script>
+
+</body>
+</html>
