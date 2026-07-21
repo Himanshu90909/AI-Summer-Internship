@@ -1,109 +1,37 @@
-# AI Image Studio
+# MirAI School of Technology - Virtual Summer Internship 2026
+# Capstone Mini-Project: The Multi-Modal Visual Novel
 
-Create stunning AI-generated images with customizable art styles and dimensions.
+A "Choose Your Own Adventure" Visual Novel Engine built with Streamlit that orchestrates:
+- **Gemini AI** for structured JSON story generation
+- **Pollinations AI** for dynamic scene illustrations
+- **gTTS** for text-to-speech narration
+- **Dynamic UI rendering** with AI-generated choice buttons
 
-## Features
-
-- **Multiple Art Styles**: Choose from Photorealistic, Oil Painting, Watercolor, Digital Art, Anime, and Cyberpunk styles
-- **Custom Dimensions**: Adjust width and height from 256px to 1024px
-- **Magic Enhance**: Automatically boost your prompt with professional keywords
-- **Surprise Me**: Get random prompts and art styles for inspiration
-- **Download Images**: Save generated images directly to your device
-- **Responsive Design**: Works seamlessly on desktop and mobile devices
-
-## Tech Stack
-
-- **Frontend**: React 18
-- **Styling**: TailwindCSS
-- **Build Tool**: Vite
-- **Image Generation**: Pollinations AI API
-
-## Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/Himanshu90909/AI-Summer-Internship.git
-cd AI-Summer-Internship
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start the development server:
-```bash
-npm run dev
-```
-
-4. Open your browser and navigate to `http://localhost:5173`
-
-## Build for Production
+## Setup
 
 ```bash
-npm run build
+pip install -r requirements.txt
 ```
 
-This will create an optimized production build in the `dist` directory.
-
-## Preview Production Build
+## Running
 
 ```bash
-npm run preview
+streamlit run app.py
 ```
 
-## Project Structure
+Get a free Gemini API key at [Google AI Studio](https://aistudio.google.com/apikey).
 
-```
-AI-Summer-Internship/
-├── src/
-│   ├── components/
-│   │   ├── ImageGenerator.jsx
-│   │   └── ImageGenerator.css
-│   ├── App.jsx
-│   ├── App.css
-│   ├── index.css
-│   └── main.jsx
-├── index.html
-├── vite.config.js
-├── tailwind.config.js
-├── postcss.config.js
-└── package.json
-```
+You can either:
+1. Paste the key in the sidebar when the app loads
+2. Set it as an environment variable: `export GOOGLE_API_KEY=your_key`
 
-## How to Use
+## How It Works
 
-1. **Enter a Prompt**: Describe the image you want to create in the text area
-2. **Choose Art Style**: Select from various art styles using the dropdown
-3. **Adjust Dimensions**: Use sliders to set the width and height
-4. **Enable Magic Enhance**: Toggle to automatically enhance your prompt
-5. **Generate**: Click the "Generate" button to create your image
-6. **Download**: Once generated, click "Download Image" to save it
+1. **Phase 1 - Configuration**: Select genre and art style in the sidebar. The Gemini client is cached with `@st.cache_resource`.
+2. **Phase 2 - Structured JSON**: Gemini returns responses as JSON with `story_text`, `image_prompt`, and `options` keys, parsed with Python's `json` library.
+3. **Phase 3 - Dynamic UI**: A for-loop generates `st.button()` components from the AI's options list.
+4. **Phase 4 - Multi-Media**: Pollinations generates scene images, gTTS narrates the story text via `st.audio()`.
+5. **Phase 5 - Graceful Failures**: All API calls wrapped in `try/except` with `st.toast()` notifications.
 
-## Pro Tips
-
-- Be descriptive in your prompt for better results
-- Adjust dimensions for different aspect ratios
-- Enable Magic Enhance for professional-quality results
-- Use "Surprise Me!" for creative inspiration
-
-## API Integration
-
-This project uses the Pollinations AI API for image generation. The API endpoint is:
-```
-https://image.pollinations.ai/prompt/{prompt}?width={width}&height={height}
-```
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Author
-
-Himanshu90909
-
-## Acknowledgments
-
-- Powered by Pollinations AI
-- Built with React & TailwindCSS
-- Vite for fast development and building
+## Technologies
+- Python · Streamlit · Google Gemini API · Pollinations AI · gTTS · JSON Parsing · Session State Management
