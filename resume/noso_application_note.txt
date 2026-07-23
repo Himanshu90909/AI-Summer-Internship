@@ -1,0 +1,43 @@
+Subject: AI Engineer Intern Application — Himanshu Suthar
+
+Hi Noso Team,
+
+I'm Himanshu Suthar, a B.Tech CSE (AI & ML) student at Lovely Professional University. I came across the AI Engineer Intern role and immediately connected with your mission — building practical AI tools for the trades. That's exactly the kind of work I want to do: turning ambiguous, real-world problems into working AI features that people actually use.
+
+ONE AI PROJECT I'VE BUILT:
+
+Automated Email Classifier Using n8n + LLM Workflow Automation
+
+I built an end-to-end AI workflow that automatically classifies incoming emails and routes them to the right action — no human triage needed.
+
+How it works:
+1. n8n polls a Gmail inbox at intervals
+2. Each email is sent to a FastAPI endpoint I built, which uses structured prompt engineering with the OpenAI API to classify the email into one of 6 categories (Meeting, Leave Request, Support Ticket, Billing, Project Update, Other) — with a confidence score, priority level, and extracted entities (dates, names, amounts)
+3. Based on the classification, n8n's 14-node workflow with Switch routing triggers category-specific actions:
+   - Meeting → auto-creates a Google Calendar event
+   - Leave Request → notifies HR via Slack
+   - Support Ticket → alerts the support team channel in Slack
+   - Billing/Invoice → forwards to the finance team
+   - Project Update → labels and archives in Gmail
+
+What I learned:
+- Prompt engineering for reliable structured output (JSON classification with confidence scores) — the LLM needs to be grounded in a strict schema, not free-form
+- Building evaluation feedback loops — I tested classification accuracy across edge cases (ambiguous subject lines, multi-topic emails) and iterated on the prompt to improve reliability
+- Agent-style routing — the classification triggers downstream actions, which is fundamentally an agentic workflow pattern
+
+This is directly relevant to what Noso is building. Your job description mentions "AI agents and workflows for technician and sales use cases" and "integrating LLMs with CRM, call, dispatch, or field service systems." My email classifier is the same architectural pattern — LLM classifies an input, triggers automated downstream actions across multiple systems. I'd love to apply this same approach to technician job notes, sales call summarization, or dispatch routing.
+
+I also built:
+- A CrewAI multi-agent fraud detection system (4 agents with tool-calling)
+- A RAG pipeline with FastAPI + vector search for knowledge retrieval
+- A Grok API-powered chat app in React
+
+GitHub: github.com/Himanshu90909
+Portfolio: silent-neural-archive-core.base44.app
+
+I'm comfortable working with incomplete information, shipping fast, and building tools for real users — not just demos. I'd love to talk about how I can contribute to Noso.
+
+Best,
+Himanshu Suthar
+sutharindustry@gmail.com
++91 9660484162

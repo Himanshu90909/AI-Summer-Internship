@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Himanshu Suthar — Resume</title>
+<style>
+  @page { margin: 12mm 14mm; size: A4; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
+    color: #111;
+    background: #fff;
+    font-size: 11.5px;
+    line-height: 1.4;
+    padding: 28px 32px;
+    max-width: 210mm;
+    margin: 0 auto;
+  }
+  /* HEADER */
+  .header { text-align: center; margin-bottom: 8px; }
+  .header h1 {
+    font-size: 24px; font-weight: 800; letter-spacing: 2px;
+    text-transform: uppercase; color: #000; margin-bottom: 3px;
+  }
+  .header .tagline { font-size: 11px; color: #333; margin-bottom: 4px; }
+  .header .contact {
+    font-size: 10.5px; color: #333;
+    display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+  }
+  .header .contact a { color: #333; text-decoration: none; }
+
+  /* SECTION */
+  .section { margin-bottom: 8px; }
+  .section h2 {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.8px; color: #000;
+    border-bottom: 1.5px solid #000; padding-bottom: 2px; margin-bottom: 5px;
+  }
+
+  /* SKILLS */
+  .skills-block p { font-size: 11px; margin-bottom: 2px; }
+  .skills-block strong { font-weight: 700; }
+
+  /* EXPERIENCE & PROJECTS shared */
+  .exp-item, .proj-item { margin-bottom: 6px; }
+  .exp-header, .proj-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .exp-title, .proj-title { font-size: 12px; font-weight: 700; color: #000; }
+  .exp-date { font-size: 10.5px; color: #444; white-space: nowrap; }
+  .exp-company { font-size: 11px; color: #444; font-style: italic; margin-bottom: 2px; }
+  .proj-link { font-size: 10px; color: #444; }
+  .proj-link a { color: #444; text-decoration: none; }
+  .proj-tech { font-size: 10px; color: #555; margin-bottom: 1px; font-style: italic; }
+  .exp-bullets, .proj-bullets { list-style: none; padding: 0; }
+  .exp-bullets li, .proj-bullets li {
+    font-size: 11px; padding-left: 12px; position: relative; margin-top: 1px; color: #222;
+  }
+  .exp-bullets li::before, .proj-bullets li::before {
+    content: "•"; position: absolute; left: 2px; color: #000;
+  }
+
+  /* EDUCATION */
+  .edu-item { margin-bottom: 2px; }
+
+  /* CERTS */
+  .cert-list { list-style: none; padding: 0; }
+  .cert-list li { font-size: 11px; padding-left: 12px; position: relative; margin-top: 1px; }
+  .cert-list li::before { content: "•"; position: absolute; left: 2px; }
+
+  @media print { body { padding: 0; } .section { break-inside: avoid; } }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>Himanshu Suthar</h1>
+  <div class="tagline">AI Engineer Intern | Multi-Agent Systems · RAG · LLM Integration · Prompt Engineering · Full-Stack (Python &amp; React)</div>
+  <div class="contact">
+    <span>sutharindustry@gmail.com</span><span>•</span>
+    <span>+91 9660484162</span><span>•</span>
+    <a href="https://linkedin.com/in/himanshu-suthar-99ba4537a">LinkedIn</a><span>•</span>
+    <a href="https://github.com/Himanshu90909">GitHub</a><span>•</span>
+    <a href="https://si14.oneapp.dev">Portfolio</a>
+  </div>
+</div>
+
+<!-- PROFILE -->
+<div class="section">
+  <h2>Profile</h2>
+  <p style="font-size:11px;line-height:1.45;">
+    B.Tech CSE (AI &amp; ML) student shipping production-grade AI systems. Built multi-agent fraud detection (CrewAI, 4 agents, tool-calling), LLM-powered email automation (n8n + FastAPI), a RAG pipeline with vector search, and a clinical AI platform with 98.3% accuracy. Hands-on with OpenAI, Anthropic, and Grok APIs. Comfortable turning ambiguous problems into working features and shipping independently.
+  </p>
+</div>
+
+<!-- CORE SKILLS -->
+<div class="section">
+  <h2>Core Skills</h2>
+  <div class="skills-block">
+    <p><strong>Languages:</strong> Python, JavaScript, TypeScript, SQL</p>
+    <p><strong>AI/LLM:</strong> CrewAI, OpenAI &amp; Anthropic APIs, Grok API (xAI), n8n, LangChain, Prompt Engineering, Multi-Agent Orchestration, Tool-Calling, Response Evaluation</p>
+    <p><strong>RAG &amp; Retrieval:</strong> Vector Search, Embeddings, FastAPI RAG Pipelines, Knowledge Base Retrieval, Chunking &amp; Similarity Search</p>
+    <p><strong>Web &amp; Backend:</strong> React, JavaScript (ES6+), Node.js, FastAPI, REST APIs, Postgres, Supabase, Responsive UI</p>
+    <p><strong>ML &amp; Data:</strong> Scikit-learn, PyTorch, TensorFlow, Pandas, Matplotlib, Seaborn, AUC/ROC Evaluation, Cohort &amp; Funnel Analysis</p>
+    <p><strong>Engineering &amp; Cloud:</strong> Git &amp; GitHub, Docker, Google Cloud (Cloud Run, BigQuery), Agile/SDLC, JIRA, Unit Testing</p>
+  </div>
+</div>
+
+<!-- EXPERIENCE -->
+<div class="section">
+  <h2>Experience</h2>
+
+  <div class="exp-item">
+    <div class="exp-header">
+      <span class="exp-title">AI Engineer Intern</span>
+      <span class="exp-date">Jul 2026 – Present</span>
+    </div>
+    <div class="exp-company">NOSO Labs (YC S25) · San Francisco Bay Area</div>
+    <ul class="exp-bullets">
+      <li>Building AI agents and workflows for technician and sales use cases in the trades — prototyping LLM-powered features for field teams, dispatch, and business operators.</li>
+      <li>Developing RAG systems using company and customer knowledge bases; integrating LLMs with CRM, call, and field service systems.</li>
+      <li>Improving prompt quality and model evaluation through structured feedback loops; creating internal tools for data processing and customer onboarding.</li>
+    </ul>
+  </div>
+
+  <div class="exp-item">
+    <div class="exp-header">
+      <span class="exp-title">AI Engineer</span>
+      <span class="exp-date">Apr 2026 – May 2026</span>
+    </div>
+    <div class="exp-company">The AI Signal</div>
+    <ul class="exp-bullets">
+      <li>Built a local-first RAG backend (FastAPI + vector search) optimized for low-latency inference — document chunking, embedding generation, and similarity search pipeline.</li>
+      <li>Debugged performance bottlenecks through structured evaluation of chunk sizes and embedding models; authored architecture documentation for engineering handoffs.</li>
+    </ul>
+  </div>
+
+  <div class="exp-item">
+    <div class="exp-header">
+      <span class="exp-title">Data Analyst</span>
+      <span class="exp-date">May 2026 – Present</span>
+    </div>
+    <div class="exp-company">3Skill</div>
+    <ul class="exp-bullets">
+      <li>Analyzed 10,000+ records with Python and SQL — data validation, null-handling, deduplication — ensuring analytics correctness before stakeholder reporting.</li>
+      <li>Built and maintained stakeholder-facing dashboards, iterating on feedback in a fast-paced collaborative environment.</li>
+    </ul>
+  </div>
+
+  <div class="exp-item">
+    <div class="exp-header">
+      <span class="exp-title">AI Summer Intern</span>
+      <span class="exp-date">Jul 2026</span>
+    </div>
+    <div class="exp-company">Mirai School of Technology</div>
+    <ul class="exp-bullets">
+      <li>Built a Multi-Modal Visual Novel Engine integrating 3 AI APIs (Gemini, Pollinations, gTTS) with fault-tolerant error handling and dynamic JSON-based UI rendering.</li>
+      <li>Applied SDLC and Agile practices — requirements analysis, coding, unit testing — under senior developer mentorship.</li>
+    </ul>
+  </div>
+
+  <div class="exp-item">
+    <div class="exp-header">
+      <span class="exp-title">Data Science &amp; Analytics Intern</span>
+      <span class="exp-date">Jul 2026</span>
+    </div>
+    <div class="exp-company">Future Interns · Remote</div>
+    <ul class="exp-bullets">
+      <li>Completed 3 analytics projects (Sales, Churn, Funnel) across 7,000+ records — KPI analysis, cohort analysis, churn prediction, and funnel optimization with 20+ visualizations.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- PROJECTS -->
+<div class="section">
+  <h2>Key Projects</h2>
+
+  <div class="proj-item">
+    <div class="proj-header">
+      <span class="proj-title">Fraud Detection — CrewAI Multi-Agent System</span>
+      <span class="proj-link"><a href="https://github.com/Himanshu90909">GitHub</a></span>
+    </div>
+    <div class="proj-tech">Python · CrewAI · OpenAI API · Tool-Calling · Statistical Anomaly Detection</div>
+    <ul class="proj-bullets">
+      <li>Built 4 specialized agents (Transaction Analyst, Anomaly Detector, Risk Assessor, Report Generator) working sequentially with shared context across the pipeline.</li>
+      <li>Implemented custom tool-calling: Z-score anomaly detection, velocity fraud checks, geographic flagging, high-risk merchant detection.</li>
+    </ul>
+  </div>
+
+  <div class="proj-item">
+    <div class="proj-header">
+      <span class="proj-title">Automated Email Classifier — n8n + LLM Workflow</span>
+      <span class="proj-link"><a href="https://github.com/Himanshu90909">GitHub</a></span>
+    </div>
+    <div class="proj-tech">n8n · FastAPI · OpenAI API · Gmail/Slack/Calendar APIs · Prompt Engineering</div>
+    <ul class="proj-bullets">
+      <li>14-node n8n workflow: polls inbox → LLM classifies into 6 categories with confidence scores → routes to Gmail labels, Slack alerts, calendar events, and email forwarding via Switch routing.</li>
+      <li>Designed FastAPI endpoint with structured prompt engineering for JSON output — entity extraction, priority scoring, and classification accuracy iteration.</li>
+    </ul>
+  </div>
+
+  <div class="proj-item">
+    <div class="proj-header">
+      <span class="proj-title">RAG Pipeline — Retrieval-Augmented Generation Backend</span>
+      <span class="proj-link"><a href="https://github.com/Himanshu90909">GitHub</a></span>
+    </div>
+    <div class="proj-tech">Python · FastAPI · Vector Search · Embeddings · LLM APIs</div>
+    <ul class="proj-bullets">
+      <li>Built RAG pipeline — document chunking, embedding generation, similarity search, LLM-grounded response synthesis — optimized for low-latency inference.</li>
+    </ul>
+  </div>
+
+  <div class="proj-item">
+    <div class="proj-header">
+      <span class="proj-title">SportChat — AI Sports Conversation App</span>
+      <span class="proj-link"><a href="https://github.com/Himanshu90909">GitHub</a></span>
+    </div>
+    <div class="proj-tech">JavaScript · React · Grok API (xAI) · Prompt Engineering · REST APIs</div>
+    <ul class="proj-bullets">
+      <li>Full-stack chat app with real-time LLM-driven conversations — prompt engineering to ground responses in sports context for domain-specific accuracy.</li>
+    </ul>
+  </div>
+
+  <div class="proj-item">
+    <div class="proj-header">
+      <span class="proj-title">Healthcare AI System — Clinical Intelligence Console</span>
+      <span class="proj-link"><a href="https://si14.oneapp.dev">si14.oneapp.dev</a></span>
+    </div>
+    <div class="proj-tech">Python · FastAPI · Scikit-learn · PyTorch · 8 ML Algorithms · REST APIs</div>
+    <ul class="proj-bullets">
+      <li>Trained 8 algorithms on clinical datasets — 98.3% accuracy, 0.997 AUC. Unified behind a single FastAPI backend serving 8 REST endpoints.</li>
+    </ul>
+  </div>
+
+  <div class="proj-item">
+    <div class="proj-header">
+      <span class="proj-title">Cardiac Risk Atlas — Heart-Disease Risk Estimator</span>
+      <span class="proj-link"><a href="https://cra12.oneapp.dev">cra12.oneapp.dev</a></span>
+    </div>
+    <div class="proj-tech">Python · Logistic Regression · Statistical Modeling · Data Imputation</div>
+    <ul class="proj-bullets">
+      <li>Logistic regression on Cleveland (n=1,025) and Framingham (n=4,240) datasets — AUC 0.93 with median imputation for missing values.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- EDUCATION -->
+<div class="section">
+  <h2>Education</h2>
+  <div class="edu-item">
+    <div class="exp-header">
+      <span class="exp-title">B.Tech — Computer Science Engineering (AI &amp; ML)</span>
+      <span class="exp-date">Aug 2025 – May 2029</span>
+    </div>
+    <div class="exp-company">Lovely Professional University (LPU)</div>
+    <p style="font-size:10.5px;color:#555;margin-top:1px;">Coursework: Data Structures &amp; Algorithms · Software Engineering · Statistics · Machine Learning</p>
+  </div>
+</div>
+
+<!-- CERTIFICATIONS -->
+<div class="section">
+  <h2>Certifications &amp; Achievements</h2>
+  <ul class="cert-list">
+    <li>5-Day AI Agents Intensive Course — Google</li>
+    <li>Software Engineering Job Simulation — Electronic Arts</li>
+    <li>Data Visualisation: Empowering Business with Effective Insights — Tata Group</li>
+    <li>NeuroHack 2026 Hackathon — Built CivicAI (Google Cloud, BigQuery, Cloud Run)</li>
+  </ul>
+</div>
+
+</body>
+</html>
