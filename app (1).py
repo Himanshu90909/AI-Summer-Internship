@@ -1,12 +1,10 @@
 """
-Sports Analytics Dashboard
+Sports Analytics Dashboard (Streamlit-only, no third-party charting libs)
 Run with: streamlit run app.py
 """
 
 import numpy as np
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
 
 st.set_page_config(
@@ -98,7 +96,6 @@ f_logs = logs_df[(logs_df["date"].dt.date >= start_date) & (logs_df["date"].dt.d
 f_teams = teams_df[teams_df["team"].isin(team_filter)]
 f_players = players_df[players_df["team"].isin(team_filter)]
 
-standings_all = compute_standings(games_df[games_df.home_team.isin(team_filter) & games_df.away_team.isin(team_filter)] if False else games_df, teams_df)
 standings = compute_standings(f_games[f_games.home_team.isin(team_filter) & f_games.away_team.isin(team_filter)], f_teams) if len(f_games) else pd.DataFrame()
 
 # ---------------------------------------------------------------------------
@@ -152,25 +149,22 @@ with tab_overview:
     with col2:
         st.subheader("Points For vs Against")
         if len(standings):
-            fig = px.scatter(
-                standings, x="PF", y="PA", text="team", color="conference",
-                size="GP", hover_data=["W", "L", "Win%"],
-            )
-            fig.update_traces(textposition="top center")
-            fig.add_shape(type="line", x0=standings.PF.min(), y0=standings.PF.min(),
-                           x1=standings.PF.max(), y1=standings.PF.max(),
-                           line=dict(dash="dash", color="gray"))
-            fig.update_layout(height=420, margin=dict(t=10))
-            st.plotly_chart(fig, use_container_width=True)
+            scatter_df = standings.set_index("team")[["PF", "PA"]]
+            st.scatter_chart(standings, x="PF", y="PA", color="conference", size="GP", height=420)
+            st.caption("Teams above the diagonal (PA > PF) are outscored more than they outscore opponents.")
+        else:
+            st.info("No data to plot.")
 
     st.subheader("Scoring Trend Over Time (League Avg Points per Game)")
     if len(f_games):
         trend = f_games.copy()
         trend["total_pts"] = trend["home_score"] + trend["away_score"]
-        trend = trend.groupby(trend["date"].dt.to_period("W").apply(lambda p: p.start_time))["total_pts"].mean().reset_index()
-        fig2 = px.line(trend, x="date", y="total_pts", markers=True)
-        fig2.update_layout(yaxis_title="Avg total points / game", xaxis_title="Week", height=350, margin=dict(t=10))
-        st.plotly_chart(fig2, use_container_width=True)
+        trend = (
+            trend.groupby(trend["date"].dt.to_period("W").apply(lambda p: p.start_time))["total_pts"]
+            .mean()
+            .rename("Avg total points / game")
+        )
+        st.line_chart(trend, height=350)
 
 # --- Team Analysis --------------------------------------------------------
 with tab_teams:
@@ -197,11 +191,9 @@ with tab_teams:
         st.subheader(f"{sel_team} — Scoring margin by game")
         if len(team_games):
             team_games["margin"] = team_games.team_score - team_games.opp_score
-            fig3 = px.bar(team_games, x="date", y="margin", color=team_games.margin > 0,
-                          color_discrete_map={True: "#2ca02c", False: "#d62728"},
-                          hover_data=["opponent", "team_score", "opp_score"])
-            fig3.update_layout(showlegend=False, height=350, margin=dict(t=10), yaxis_title="Margin (+/-)")
-            st.plotly_chart(fig3, use_container_width=True)
+            margin_series = team_games.set_index("date")["margin"]
+            st.bar_chart(margin_series, height=350)
+            st.caption("Positive bars = win margin, negative bars = loss margin.")
 
         st.subheader("Roster")
         roster = players_df[players_df.team == sel_team].sort_values("skill", ascending=False)
@@ -218,24 +210,19 @@ with tab_players:
     st.subheader("League Leaders")
     if len(f_logs):
         stat_choice = st.radio("Rank by", ["points", "rebounds", "assists", "steals", "blocks"], horizontal=True)
-        leaders = f_logs.groupby(["player", "team"])[stat_choice].mean().round(1).reset_index()
-        leaders = leaders.sort_values(stat_choice, ascending=False).head(15)
-        fig4 = px.bar(leaders.sort_values(stat_choice), x=stat_choice, y="player", color="team", orientation="h")
-        fig4.update_layout(height=500, margin=dict(t=10), yaxis_title="")
-        st.plotly_chart(fig4, use_container_width=True)
+        leaders = f_logs.groupby("player")[stat_choice].mean().round(1).sort_values(ascending=False).head(15)
+        st.bar_chart(leaders, height=500, horizontal=True)
 
         st.subheader("Player Comparison")
         players_avail = sorted(f_logs["player"].unique())
-        default_pair = players_avail[:2] if len(players_avail) >= 2 else players_avail
-        compare = st.multiselect("Pick 2–4 players", players_avail, default=default_pair, max_selections=4)
+        default_pair = players_avail[:3] if len(players_avail) >= 3 else players_avail
+        compare = st.multiselect("Pick 2–5 players", players_avail, default=default_pair, max_selections=5)
         if len(compare) >= 2:
             radar_stats = ["points", "rebounds", "assists", "steals", "blocks"]
-            radar_df = f_logs[f_logs.player.isin(compare)].groupby("player")[radar_stats].mean()
-            fig5 = go.Figure()
-            for p in compare:
-                fig5.add_trace(go.Scatterpolar(r=radar_df.loc[p].values, theta=radar_stats, fill="toself", name=p))
-            fig5.update_layout(polar=dict(radialaxis=dict(visible=True)), height=450, margin=dict(t=10))
-            st.plotly_chart(fig5, use_container_width=True)
+            comp_df = f_logs[f_logs.player.isin(compare)].groupby("player")[radar_stats].mean().round(1)
+            st.caption("Average per-game stats side by side (grouped bars):")
+            st.bar_chart(comp_df.T, height=400)
+            st.dataframe(comp_df, use_container_width=True)
         else:
             st.caption("Pick at least 2 players to compare.")
     else:
@@ -263,12 +250,12 @@ with tab_h2h:
             c1, c2 = st.columns(2)
             c1.metric(f"{team_a} wins", a_wins)
             c2.metric(f"{team_b} wins", b_wins)
+
+            win_counts = pd.Series({team_a: a_wins, team_b: b_wins}, name="Wins")
+            st.bar_chart(win_counts, height=300)
+
             h2h_disp = h2h[["date", "home_team", "home_score", "away_team", "away_score", "winner"]].sort_values("date")
             st.dataframe(h2h_disp, use_container_width=True)
-
-            fig6 = px.pie(names=[team_a, team_b], values=[a_wins, b_wins], hole=0.5)
-            fig6.update_layout(height=350, margin=dict(t=10))
-            st.plotly_chart(fig6, use_container_width=True)
 
 # --- Raw Data -----------------------------------------------------------
 with tab_data:
