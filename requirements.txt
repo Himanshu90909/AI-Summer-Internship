@@ -1,4 +1,1 @@
-streamlit>=1.30.0
-google-generativeai>=0.3.0
-gTTS>=2.5.0
-Pillow>=10.0.0
+numpy\npandas\nplotly\nstreamlit
