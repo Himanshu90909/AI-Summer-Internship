@@ -1,268 +1,455 @@
 """
-Sports Analytics Dashboard (Streamlit-only, no third-party charting libs)
-Run with: streamlit run app.py
+MirAI School of Technology - Virtual Summer Internship 2026
+Capstone Mini-Project: The Multi-Modal Visual Novel
+The "AI Builder" Track
+
+A "Choose Your Own Adventure" Visual Novel Engine built with Streamlit.
+Orchestrates: Gemini (structured JSON), Pollinations (visuals), gTTS (audio narration).
 """
 
-import numpy as np
-import pandas as pd
+import json
+import os
+import io
+import time
+import urllib.request
+import urllib.error
+from PIL import Image
+
 import streamlit as st
-
-st.set_page_config(
-    page_title="Sports Analytics Dashboard",
-    page_icon="🏀",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-# ---------------------------------------------------------------------------
-# Data loading
-# ---------------------------------------------------------------------------
-@st.cache_data
-def load_data():
-    teams = pd.read_csv("teams.csv")
-    players = pd.read_csv("players.csv")
-    games = pd.read_csv("games.csv", parse_dates=["date"])
-    logs = pd.read_csv("player_game_logs.csv", parse_dates=["date"])
-    return teams, players, games, logs
+import google.generativeai as genai
+from gtts import gTTS
 
 
-teams_df, players_df, games_df, logs_df = load_data()
+# ============================================================
+# PHASE 1: The Director's Cut (UI & Configuration)
+# ============================================================
 
-# ---------------------------------------------------------------------------
-# Standings helper
-# ---------------------------------------------------------------------------
-def compute_standings(games: pd.DataFrame, teams: pd.DataFrame) -> pd.DataFrame:
-    records = {t: {"W": 0, "L": 0, "PF": 0, "PA": 0} for t in teams["team"]}
-    for _, g in games.iterrows():
-        h, a = g["home_team"], g["away_team"]
-        hs, aw = g["home_score"], g["away_score"]
-        records[h]["PF"] += hs
-        records[h]["PA"] += aw
-        records[a]["PF"] += aw
-        records[a]["PA"] += hs
-        if hs > aw:
-            records[h]["W"] += 1
-            records[a]["L"] += 1
-        else:
-            records[a]["W"] += 1
-            records[h]["L"] += 1
-    rows = []
-    for t, r in records.items():
-        gp = r["W"] + r["L"]
-        rows.append({
-            "team": t,
-            "W": r["W"], "L": r["L"], "GP": gp,
-            "Win%": round(r["W"] / gp, 3) if gp else 0.0,
-            "PF": r["PF"], "PA": r["PA"],
-            "Diff": r["PF"] - r["PA"],
-            "PPG": round(r["PF"] / gp, 1) if gp else 0.0,
-        })
-    standings = pd.DataFrame(rows).merge(teams, on="team")
-    return standings.sort_values(["conference", "Win%"], ascending=[True, False])
+@st.cache_resource
+def get_gemini_client(api_key):
+    """
+    Securely cache the Gemini client using @st.cache_resource.
+    This ensures we don't re-initialize the client on every Streamlit rerun.
+    """
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        system_instruction=SYSTEM_PROMPT
+    )
+    return model
 
 
-# ---------------------------------------------------------------------------
-# Sidebar filters
-# ---------------------------------------------------------------------------
-st.sidebar.title("🏀 Filters")
+# The system prompt instructs Gemini to ALWAYS return structured JSON.
+# This is the backbone of Phase 2 — the Structured JSON Engine.
+SYSTEM_PROMPT = """You are the narrator of a "Choose Your Own Adventure" visual novel.
 
-min_date, max_date = games_df["date"].min(), games_df["date"].max()
-date_range = st.sidebar.date_input(
-    "Date range", value=(min_date.date(), max_date.date()),
-    min_value=min_date.date(), max_value=max_date.date(),
-)
-if isinstance(date_range, tuple) and len(date_range) == 2:
-    start_date, end_date = date_range
-else:
-    start_date, end_date = min_date.date(), max_date.date()
+CRITICAL: You must ALWAYS respond with a valid JSON object and NOTHING else.
+No markdown, no code fences, no commentary — just raw JSON.
 
-conf_options = ["All"] + sorted(teams_df["conference"].unique().tolist())
-conf_filter = st.sidebar.selectbox("Conference", conf_options)
+The JSON object must contain exactly these three keys:
 
-team_pool = teams_df["team"].tolist() if conf_filter == "All" else teams_df[teams_df.conference == conf_filter]["team"].tolist()
-team_filter = st.sidebar.multiselect("Teams", options=sorted(team_pool), default=sorted(team_pool))
+1. "story_text": A vivid, immersive narrative paragraph (2-4 sentences) describing
+   what happens next in the story based on the user's choice. Be descriptive and
+   atmospheric — set the scene for the reader.
 
-st.sidebar.markdown("---")
-st.sidebar.caption("Swap `teams.csv`, `players.csv`, `games.csv`, `player_game_logs.csv` with your own data using the same columns to plug in a real league.")
+2. "image_prompt": A heavily engineered prompt for an AI image generator. This should
+   be a detailed, visual description of the current scene that would produce a stunning
+   illustration. Include art style, lighting, mood, composition details, and specific
+   visual elements mentioned in the story text.
 
-# Apply filters
-mask_games = (
-    (games_df["date"].dt.date >= start_date)
-    & (games_df["date"].dt.date <= end_date)
-    & (games_df["home_team"].isin(team_filter) | games_df["away_team"].isin(team_filter))
-)
-f_games = games_df[mask_games]
-f_logs = logs_df[(logs_df["date"].dt.date >= start_date) & (logs_df["date"].dt.date <= end_date) & (logs_df["team"].isin(team_filter))]
-f_teams = teams_df[teams_df["team"].isin(team_filter)]
-f_players = players_df[players_df["team"].isin(team_filter)]
+3. "options": A JSON array of 2 to 3 strings, each representing a distinct choice the
+   player can make next. Each option should be a short, action-oriented phrase (e.g.,
+   "Open the mysterious door", "Search the room for clues", "Run away").
 
-standings = compute_standings(f_games[f_games.home_team.isin(team_filter) & f_games.away_team.isin(team_filter)], f_teams) if len(f_games) else pd.DataFrame()
+Here is an example of the exact format you must follow:
 
-# ---------------------------------------------------------------------------
-# Header + KPIs
-# ---------------------------------------------------------------------------
-st.title("🏀 Sports Analytics Dashboard")
-st.caption("Synthetic league data — swap in your own CSVs to make this real. Use the sidebar to filter by date and team.")
+{
+  "story_text": "You step into the dimly lit chamber. Ancient carvings line the walls, glowing faintly with an otherworldly blue light. In the center sits a pedestal with a shimmering orb.",
+  "image_prompt": "Digital painting of an ancient stone chamber with glowing blue wall carvings, a pedestal with a luminous orb in the center, dramatic lighting, cinematic composition, fantasy art style, highly detailed, atmospheric mist",
+  "options": ["Touch the glowing orb", "Examine the wall carvings", "Leave the chamber"]
+}
 
-total_games = len(f_games)
-total_points = int(f_games["home_score"].sum() + f_games["away_score"].sum())
-avg_margin = round((f_games["home_score"] - f_games["away_score"]).abs().mean(), 1) if total_games else 0
-top_scorer = (
-    f_logs.groupby("player")["points"].mean().sort_values(ascending=False).head(1)
-    if len(f_logs) else pd.Series(dtype=float)
-)
+RULES:
+- Always return valid, parseable JSON.
+- Keep the story moving forward — never repeat the same scene.
+- Match the genre and art style specified by the user.
+- Make each choice meaningful and distinct.
+- If the story reaches a natural ending, set "options" to ["Start a new adventure"].
+"""
 
-k1, k2, k3, k4 = st.columns(4)
-k1.metric("Games in range", f"{total_games:,}")
-k2.metric("Total points scored", f"{total_points:,}")
-k3.metric("Avg. margin of victory", f"{avg_margin}")
-k4.metric(
-    "Top scorer (PPG)",
-    top_scorer.index[0] if len(top_scorer) else "—",
-    f"{top_scorer.iloc[0]:.1f} pts" if len(top_scorer) else None,
-)
 
-st.markdown("---")
+def init_session_state():
+    """Initialize st.session_state to store chat history and Gemini chat object."""
+    if "chat" not in st.session_state:
+        st.session_state.chat = None
+    if "history" not in st.session_state:
+        st.session_state.history = []  # list of {role, text, image, audio, options}
+    if "story_started" not in st.session_state:
+        st.session_state.story_started = False
+    if "genre" not in st.session_state:
+        st.session_state.genre = "Fantasy"
+    if "art_style" not in st.session_state:
+        st.session_state.art_style = "Digital Painting"
 
-# ---------------------------------------------------------------------------
-# Tabs
-# ---------------------------------------------------------------------------
-tab_overview, tab_teams, tab_players, tab_h2h, tab_data = st.tabs(
-    ["📊 Overview", "🏟️ Team Analysis", "🧍 Player Stats", "⚔️ Head-to-Head", "🗂️ Raw Data"]
-)
 
-# --- Overview -----------------------------------------------------------
-with tab_overview:
-    col1, col2 = st.columns([1.3, 1])
+# ============================================================
+# PHASE 2: The Structured JSON Engine
+# ============================================================
 
-    with col1:
-        st.subheader("Standings")
-        if len(standings):
-            disp = standings[["team", "conference", "city", "W", "L", "Win%", "PPG", "Diff"]].reset_index(drop=True)
-            st.dataframe(
-                disp.style.background_gradient(subset=["Win%"], cmap="Greens").format({"Win%": "{:.3f}"}),
-                use_container_width=True, height=420,
-            )
-        else:
-            st.info("No games in the selected filters.")
+def get_story_response(user_input, genre, art_style):
+    """
+    Send the user's choice to Gemini and parse the JSON response.
 
-    with col2:
-        st.subheader("Points For vs Against")
-        if len(standings):
-            scatter_df = standings.set_index("team")[["PF", "PA"]]
-            st.scatter_chart(standings, x="PF", y="PA", color="conference", size="GP", height=420)
-            st.caption("Teams above the diagonal (PA > PF) are outscored more than they outscore opponents.")
-        else:
-            st.info("No data to plot.")
+    Uses Python's built-in json library to parse the AI's string response
+    into a usable Python dictionary with story_text, image_prompt, and options.
+    """
+    # Build the full prompt with genre and art style context
+    context_prompt = f"""
+    Genre: {genre}
+    Art Style: {art_style}
 
-    st.subheader("Scoring Trend Over Time (League Avg Points per Game)")
-    if len(f_games):
-        trend = f_games.copy()
-        trend["total_pts"] = trend["home_score"] + trend["away_score"]
-        trend = (
-            trend.groupby(trend["date"].dt.to_period("W").apply(lambda p: p.start_time))["total_pts"]
-            .mean()
-            .rename("Avg total points / game")
+    The user's action: {user_input}
+
+    Respond with the JSON object now. Remember: ONLY JSON, no other text.
+    """
+
+    # Get response from Gemini
+    response = st.session_state.chat.send_message(context_prompt)
+    raw_text = response.text.strip()
+
+    # Clean up: Gemini sometimes wraps JSON in markdown code fences
+    if raw_text.startswith("```"):
+        # Remove ```json or ``` at the start and ``` at the end
+        raw_text = raw_text.split("\n", 1)[1] if "\n" in raw_text else raw_text
+        raw_text = raw_text.replace("```", "").strip()
+        # If it started with ```json, remove that prefix
+        if raw_text.startswith("json"):
+            raw_text = raw_text[4:].strip()
+
+    # Parse the JSON string into a Python dictionary
+    try:
+        story_data = json.loads(raw_text)
+    except json.JSONDecodeError:
+        # If JSON parsing fails, try to extract JSON from the text
+        try:
+            start = raw_text.find("{")
+            end = raw_text.rfind("}") + 1
+            if start != -1 and end > start:
+                story_data = json.loads(raw_text[start:end])
+            else:
+                raise
+        except (json.JSONDecodeError, ValueError):
+            # Fallback: create a minimal valid response
+            st.toast("⚠️ AI response format issue — generating fallback story...")
+            story_data = {
+                "story_text": raw_text[:500] if raw_text else "The story continues, but the path ahead is unclear...",
+                "image_prompt": f"{art_style} style scene, {genre} genre, atmospheric, dramatic lighting",
+                "options": ["Continue the adventure", "Try something different"]
+            }
+
+    # Validate required keys exist
+    if "story_text" not in story_data:
+        story_data["story_text"] = "The adventure continues..."
+    if "image_prompt" not in story_data:
+        story_data["image_prompt"] = f"{art_style} style, {genre} scene, atmospheric"
+    if "options" not in story_data or not isinstance(story_data["options"], list):
+        story_data["options"] = ["Continue", "Explore elsewhere"]
+
+    return story_data
+
+
+# ============================================================
+# PHASE 4: Visual Asset Generation (Pollinations API)
+# ============================================================
+
+def generate_image(image_prompt, art_style):
+    """
+    Send the parsed image_prompt to the Pollinations API.
+    Downloads and returns a PIL Image object.
+
+    Wrapped in try/except for graceful failure (Phase 5).
+    """
+    # Engineer the final prompt with art style
+    full_prompt = f"{image_prompt}, {art_style} style, highly detailed, cinematic"
+
+    # Pollinations API endpoint
+    seed = int(time.time()) % 1000000
+    encoded_prompt = urllib.parse.quote(full_prompt)
+    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=768&height=512&seed={seed}&nologo=true"
+
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    response = urllib.request.urlopen(req, timeout=30)
+    img_data = response.read()
+
+    img = Image.open(io.BytesIO(img_data))
+    return img
+
+
+# ============================================================
+# PHASE 4: Audio Integration (gTTS - Text-to-Speech)
+# ============================================================
+
+def generate_narration_audio(story_text):
+    """
+    Use gTTS (Google Text-to-Speech) to convert the AI's story_text
+    into an audio file. Returns a BytesIO buffer for st.audio() playback.
+    """
+    tts = gTTS(text=story_text, lang="en", slow=False)
+    audio_buffer = io.BytesIO()
+    tts.write_to_fp(audio_buffer)
+    audio_buffer.seek(0)
+    return audio_buffer
+
+
+# ============================================================
+# MAIN APPLICATION
+# ============================================================
+
+def main():
+    st.set_page_config(
+        page_title="Visual Novel Engine",
+        page_icon="🎭",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+
+    # Custom CSS for a polished visual novel aesthetic
+    st.markdown("""
+    <style>
+    .stApp { background: #0a0a12; }
+    .story-text {
+        font-size: 18px;
+        line-height: 1.8;
+        color: #e0e0e8;
+        padding: 20px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 12px;
+        border-left: 3px solid #7c5cff;
+        margin: 10px 0;
+    }
+    .scene-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #7c5cff;
+        margin-bottom: 10px;
+    }
+    .choice-label {
+        font-size: 14px;
+        color: #9b9ba5;
+        margin-top: 15px;
+        margin-bottom: 5px;
+    }
+    div.stButton > button {
+        width: 100%;
+        text-align: left;
+        padding: 12px 16px;
+        border: 1px solid #2a2a3a;
+        border-radius: 10px;
+        background: rgba(124, 92, 255, 0.1);
+        color: #e0e0e8;
+        font-size: 15px;
+        transition: all 0.2s;
+    }
+    div.stButton > button:hover {
+        background: rgba(124, 92, 255, 0.25);
+        border-color: #7c5cff;
+        transform: translateX(4px);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    init_session_state()
+
+    # ============================================================
+    # SIDEBAR: Story Settings (Phase 1)
+    # ============================================================
+    with st.sidebar:
+        st.markdown("## 🎭 Story Settings")
+
+        genre = st.selectbox(
+            "📖 Story Genre",
+            ["Fantasy", "Sci-Fi", "Horror", "Mystery", "Adventure",
+             "Cyberpunk", "Post-Apocalyptic", "Steampunk", "Noir Detective"],
+            index=["Fantasy", "Sci-Fi", "Horror", "Mystery", "Adventure",
+                   "Cyberpunk", "Post-Apocalyptic", "Steampunk", "Noir Detective"].index(st.session_state.genre)
         )
-        st.line_chart(trend, height=350)
 
-# --- Team Analysis --------------------------------------------------------
-with tab_teams:
-    if not len(f_teams):
-        st.info("Select at least one team in the sidebar.")
-    else:
-        sel_team = st.selectbox("Choose a team", sorted(f_teams["team"].unique()))
-        team_games = games_df[(games_df.home_team == sel_team) | (games_df.away_team == sel_team)]
-        team_games = team_games[(team_games["date"].dt.date >= start_date) & (team_games["date"].dt.date <= end_date)]
-
-        team_games = team_games.assign(
-            team_score=np.where(team_games.home_team == sel_team, team_games.home_score, team_games.away_score),
-            opp_score=np.where(team_games.home_team == sel_team, team_games.away_score, team_games.home_score),
-            opponent=np.where(team_games.home_team == sel_team, team_games.away_team, team_games.home_team),
+        art_style = st.selectbox(
+            "🎨 Art Style",
+            ["Digital Painting", "Anime", "Watercolor", "Oil Painting",
+             "Pixel Art", "Comic Book", "Photorealistic", "Concept Art",
+             "Studio Ghibli Style", "Dark Fantasy"],
+            index=["Digital Painting", "Anime", "Watercolor", "Oil Painting",
+                   "Pixel Art", "Comic Book", "Photorealistic", "Concept Art",
+                   "Studio Ghibli Style", "Dark Fantasy"].index(st.session_state.art_style)
         )
-        team_games["result"] = np.where(team_games.team_score > team_games.opp_score, "W", "L")
-        team_games = team_games.sort_values("date")
 
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Record", f"{(team_games.result=='W').sum()}-{(team_games.result=='L').sum()}")
-        c2.metric("Avg points scored", round(team_games.team_score.mean(), 1) if len(team_games) else 0)
-        c3.metric("Avg points allowed", round(team_games.opp_score.mean(), 1) if len(team_games) else 0)
+        st.session_state.genre = genre
+        st.session_state.art_style = art_style
 
-        st.subheader(f"{sel_team} — Scoring margin by game")
-        if len(team_games):
-            team_games["margin"] = team_games.team_score - team_games.opp_score
-            margin_series = team_games.set_index("date")["margin"]
-            st.bar_chart(margin_series, height=350)
-            st.caption("Positive bars = win margin, negative bars = loss margin.")
+        st.markdown("---")
 
-        st.subheader("Roster")
-        roster = players_df[players_df.team == sel_team].sort_values("skill", ascending=False)
-        agg = f_logs[f_logs.team == sel_team].groupby("player").agg(
-            GP=("game_id", "nunique"), PPG=("points", "mean"), RPG=("rebounds", "mean"),
-            APG=("assists", "mean"), SPG=("steals", "mean"), BPG=("blocks", "mean"),
-        ).round(1).reset_index()
-        roster = roster.merge(agg, on="player", how="left")
-        st.dataframe(roster[["player", "position", "age", "GP", "PPG", "RPG", "APG", "SPG", "BPG"]],
-                     use_container_width=True, height=350)
+        # Gemini API key input (falls back to environment variable)
+        env_key = os.environ.get("GOOGLE_API_KEY", "")
+        api_key = st.text_input(
+            "🔑 Gemini API Key",
+            value=env_key,
+            type="password",
+            help="Get your free key at https://aistudio.google.com/apikey. "
+                 "Or set the GOOGLE_API_KEY environment variable."
+        )
 
-# --- Player Stats -----------------------------------------------------------
-with tab_players:
-    st.subheader("League Leaders")
-    if len(f_logs):
-        stat_choice = st.radio("Rank by", ["points", "rebounds", "assists", "steals", "blocks"], horizontal=True)
-        leaders = f_logs.groupby("player")[stat_choice].mean().round(1).sort_values(ascending=False).head(15)
-        st.bar_chart(leaders, height=500, horizontal=True)
+        st.markdown("---")
 
-        st.subheader("Player Comparison")
-        players_avail = sorted(f_logs["player"].unique())
-        default_pair = players_avail[:3] if len(players_avail) >= 3 else players_avail
-        compare = st.multiselect("Pick 2–5 players", players_avail, default=default_pair, max_selections=5)
-        if len(compare) >= 2:
-            radar_stats = ["points", "rebounds", "assists", "steals", "blocks"]
-            comp_df = f_logs[f_logs.player.isin(compare)].groupby("player")[radar_stats].mean().round(1)
-            st.caption("Average per-game stats side by side (grouped bars):")
-            st.bar_chart(comp_df.T, height=400)
-            st.dataframe(comp_df, use_container_width=True)
-        else:
-            st.caption("Pick at least 2 players to compare.")
+        if st.button("🔄 Start New Adventure", use_container_width=True):
+            st.session_state.history = []
+            st.session_state.story_started = False
+            st.session_state.chat = None
+            st.rerun()
+
+        st.markdown("---")
+        st.caption("Built for MirAI School of Technology")
+        st.caption("Virtual Summer Internship 2026")
+
+    # ============================================================
+    # MAIN CONTENT AREA
+    # ============================================================
+
+    st.markdown("# 🎭 The Multi-Modal Visual Novel")
+    st.markdown(f"*Genre: {genre} · Art Style: {art_style}*")
+    st.markdown("---")
+
+    # Check for API key
+    if not api_key:
+        st.warning("👈 Enter your Gemini API key in the sidebar to begin your adventure.")
+        st.info("Get a free API key at [Google AI Studio](https://aistudio.google.com/apikey)\n"
+                 "Or set the environment variable: `export GOOGLE_API_KEY=your_key`")
+        return
+
+    # Initialize Gemini client (cached via @st.cache_resource)
+    try:
+        model = get_gemini_client(api_key)
+    except Exception as e:
+        st.error(f"Failed to initialize Gemini: {e}")
+        return
+
+    # Initialize or reset chat object when genre/art_style changes
+    if st.session_state.chat is None:
+        st.session_state.chat = model.start_chat(history=[])
+
+    # Start the story if not yet begun
+    if not st.session_state.story_started:
+        st.session_state.story_started = True
+        opening_prompt = f"Start a new {genre} story with {art_style} art style. Set the opening scene and give the player their first choices."
+        process_story_turn(opening_prompt, genre, art_style, is_opening=True)
+
+    # ============================================================
+    # RENDER STORY HISTORY (using st.session_state so nothing disappears)
+    # ============================================================
+    for i, entry in enumerate(st.session_state.history):
+        render_story_entry(entry, i)
+
+    # ============================================================
+    # PHASE 3: Dynamic UI Generation
+    # ============================================================
+    # The latest entry's options become dynamically generated buttons.
+    if st.session_state.history:
+        latest = st.session_state.history[-1]
+        options = latest.get("options", [])
+
+        if options:
+            st.markdown('<p class="choice-label">🎮 What do you do?</p>', unsafe_allow_html=True)
+
+            # Write a for loop that iterates over the options list
+            # and dynamically generates an st.button() for each choice.
+            for idx, option in enumerate(options):
+                if st.button(f"➤ {option}", key=f"choice_{len(st.session_state.history)}_{idx}"):
+                    # The clicked button's text is sent to Gemini as the user's next move
+                    process_story_turn(option, genre, art_style)
+                    st.rerun()
+
+
+def process_story_turn(user_input, genre, art_style, is_opening=False):
+    """
+    Process a single story turn:
+    1. Call Gemini for structured JSON (Phase 2)
+    2. Generate image via Pollinations (Phase 4)
+    3. Generate TTS audio (Phase 4)
+    4. Store everything in session_state
+    All wrapped in try/except for graceful failures (Phase 5).
+    """
+    with st.spinner("📖 Weaving the next chapter of your story..."):
+
+        # --- PHASE 2: Get structured JSON from Gemini ---
+        try:
+            story_data = get_story_response(user_input, genre, art_style)
+        except Exception as e:
+            st.toast(f"⚠️ Story generation issue: {str(e)[:100]}")
+            story_data = {
+                "story_text": "The path ahead is shrouded in mist. You must choose your next step carefully...",
+                "image_prompt": f"{art_style} style, {genre} scene, foggy, mysterious, atmospheric",
+                "options": ["Press forward", "Turn back"]
+            }
+
+        story_text = story_data["story_text"]
+        image_prompt = story_data["image_prompt"]
+        options = story_data["options"]
+
+        # --- PHASE 4: Generate image via Pollinations ---
+        image = None
+        try:
+            image = generate_image(image_prompt, art_style)
+        except urllib.error.URLError:
+            st.toast("🖼️ Image server is busy, skipping visual...")
+        except Exception:
+            st.toast("🖼️ Image server is busy, skipping visual...")
+        # If image fails, story continues without crashing (Phase 5)
+
+        # --- PHASE 4: Generate TTS audio ---
+        audio_buffer = None
+        try:
+            audio_buffer = generate_narration_audio(story_text)
+        except Exception:
+            st.toast("🔊 Audio narration unavailable, continuing with text only...")
+        # If audio fails, story continues without crashing (Phase 5)
+
+        # --- Store in session_state so nothing disappears on rerun ---
+        entry = {
+            "story_text": story_text,
+            "image": image,
+            "audio": audio_buffer,
+            "options": options,
+            "is_opening": is_opening
+        }
+        st.session_state.history.append(entry)
+
+
+def render_story_entry(entry, index):
+    """
+    Render a single story entry: image, text, and audio.
+    Uses st.session_state data so content persists across reruns.
+    """
+    if entry.get("is_opening"):
+        st.markdown('<p class="scene-title">🌟 The Adventure Begins</p>', unsafe_allow_html=True)
     else:
-        st.info("No player logs in the selected filters.")
+        st.markdown(f'<p class="scene-title">📖 Scene {index + 1}</p>', unsafe_allow_html=True)
 
-# --- Head-to-Head -----------------------------------------------------------
-with tab_h2h:
-    st.subheader("Team Head-to-Head")
-    colA, colB = st.columns(2)
-    team_a = colA.selectbox("Team A", sorted(teams_df["team"].unique()), index=0)
-    team_b = colB.selectbox("Team B", sorted(teams_df["team"].unique()), index=1)
+    # Render image (if available)
+    if entry.get("image"):
+        st.image(entry["image"], use_container_width=True)
 
-    if team_a == team_b:
-        st.warning("Pick two different teams.")
-    else:
-        h2h = games_df[
-            ((games_df.home_team == team_a) & (games_df.away_team == team_b))
-            | ((games_df.home_team == team_b) & (games_df.away_team == team_a))
-        ]
-        if not len(h2h):
-            st.info(f"{team_a} and {team_b} haven't played this season.")
-        else:
-            a_wins = (h2h.winner == team_a).sum()
-            b_wins = (h2h.winner == team_b).sum()
-            c1, c2 = st.columns(2)
-            c1.metric(f"{team_a} wins", a_wins)
-            c2.metric(f"{team_b} wins", b_wins)
+    # Render story text
+    st.markdown(f'<div class="story-text">{entry["story_text"]}</div>', unsafe_allow_html=True)
 
-            win_counts = pd.Series({team_a: a_wins, team_b: b_wins}, name="Wins")
-            st.bar_chart(win_counts, height=300)
+    # Render audio narration (if available)
+    if entry.get("audio"):
+        st.audio(entry["audio"], format="audio/mp3")
 
-            h2h_disp = h2h[["date", "home_team", "home_score", "away_team", "away_score", "winner"]].sort_values("date")
-            st.dataframe(h2h_disp, use_container_width=True)
+    st.markdown("---")
 
-# --- Raw Data -----------------------------------------------------------
-with tab_data:
-    st.subheader("Underlying tables (filtered)")
-    st.markdown("**Games**")
-    st.dataframe(f_games, use_container_width=True, height=250)
-    st.markdown("**Player Game Logs**")
-    st.dataframe(f_logs, use_container_width=True, height=250)
-    st.download_button("Download filtered games CSV", f_games.to_csv(index=False), "games_filtered.csv")
-    st.download_button("Download filtered logs CSV", f_logs.to_csv(index=False), "logs_filtered.csv")
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
+
+if __name__ == "__main__":
+    main()
