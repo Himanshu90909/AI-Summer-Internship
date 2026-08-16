@@ -13,6 +13,10 @@
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+## > LIVE DEMO
+
+🚀 **Try the app:** [https://ai-summer-internship-ctjxkuc2sayeanv3febnbj.streamlit.app](https://ai-summer-internship-ctjxkuc2sayeanv3febnbj.streamlit.app)
+
 ## > ABOUT
 
 Life-OS is a personal wellbeing dashboard that visualizes daily screen
